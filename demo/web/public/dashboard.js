@@ -248,10 +248,11 @@
 
   function handleEscalationAnalysis(evt) {
     var d = evt.data;
-    addEventLine(evt.timestamp, "method", "Generating: " + d.target_class + "#" + d.method_name);
+    addEventLine(evt.timestamp, "method", "Generating: " + d.target_class + "#" + (d.method_name || "new capability"));
     genCount++;
     setText("gen-count", genCount);
   }
+
 
   function handleAdaptationSuccess(evt) {
     var d = evt.data;

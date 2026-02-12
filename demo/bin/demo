@@ -76,6 +76,7 @@ $logger.info "Operations attached with #{[fire, police, ems, utils, council].siz
 require_relative "../lib/autonomy/governance"
 require_relative "../lib/autonomy/chaos_bridge"
 require_relative "../lib/autonomy/self_agency_bridge"
+require "self_agency"
 
 governance = Governance.new(logger: $logger)
 governance.attach(bus)
@@ -87,6 +88,21 @@ require_relative "../lib/llm/replay_robot"
 robot_path = File.expand_path("../scenarios/demo_robot.yml", __dir__)
 code_gen_robot = ReplayRobot.new(robot_path, logger: $logger)
 $logger.info "Using ReplayRobot for code generation"
+
+# Configure SelfAgency for replay mode
+SelfAgency.configure do |config|
+  config.provider = :ollama
+  config.model    = "replay"
+  config.api_base = "http://localhost:0"
+  config.logger   = ->(stage, msg) { $logger.info "[SelfAgency:#{stage}] #{msg}" }
+end
+
+# Wire department classes to robot and bus
+[CityCouncil, FireDepartment, PoliceDepartment, EMS, Utilities].each do |klass|
+  klass.code_robot = code_gen_robot
+  klass.event_bus  = bus
+end
+$logger.info "SelfAgency configured (replay mode, 5 department classes wired)"
 
 chaos = ChaosBridge.new(robot: code_gen_robot, logger: $logger)
 chaos.attach(bus)

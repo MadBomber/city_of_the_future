@@ -31,7 +31,8 @@
       "Bash(VOICE=off ruby bin/demo:*)",
       "mcp__plugin_compound-engineering_pw__browser_take_screenshot",
       "mcp__plugin_compound-engineering_pw__browser_navigate",
-      "mcp__plugin_compound-engineering_pw__browser_click"
+      "mcp__plugin_compound-engineering_pw__browser_click",
+      "Bash(grep:*)"
     ]
   }
 }

@@ -147,6 +147,7 @@ GEM
     lumberjack (2.0.4)
       logger
     marcel (1.1.0)
+    method_source (1.1.0)
     metrics (0.15.0)
     minitest (6.0.1)
       prism (~> 1.5)
@@ -246,6 +247,10 @@ GEM
       ruby_llm (>= 1.0)
       ruby_llm-schema (>= 0.2.0)
     securerandom (0.4.1)
+    self_agency (0.0.1)
+      method_source
+      ruby_llm
+      ruby_llm-template
     simple_flow (0.3.0)
     sinatra (4.2.1)
       logger (>= 1.6.0)
@@ -294,6 +299,7 @@ DEPENDENCIES
   robot_lab!
   ruby_llm
   ruby_llm-mcp
+  self_agency
   sinatra
   typed_bus
   whispercpp (~> 1.3)
@@ -347,6 +353,7 @@ CHECKSUMS
   loofah (2.25.0) sha256=df5ed7ac3bac6a4ec802df3877ee5cc86d027299f8952e6243b3dac446b060e6
   lumberjack (2.0.4) sha256=9a87a3a16800a66e0447c768ba4f76c05848b5cc32a4a11959c6fa419a42ff45
   marcel (1.1.0) sha256=fdcfcfa33cc52e93c4308d40e4090a5d4ea279e160a7f6af988260fa970e0bee
+  method_source (1.1.0) sha256=181301c9c45b731b4769bc81e8860e72f9161ad7d66dd99103c9ab84f560f5c5
   metrics (0.15.0) sha256=61ded5bac95118e995b1bc9ed4a5f19bc9814928a312a85b200abbdac9039072
   minitest (6.0.1) sha256=7854c74f48e2e975969062833adc4013f249a4b212f5e7b9d5c040bf838d54bb
   multipart-post (2.4.1) sha256=9872d03a8e552020ca096adadbf5e3cb1cd1cdd6acd3c161136b8a5737cdb4a8
@@ -390,6 +397,7 @@ CHECKSUMS
   ruby_llm-semantic_cache (0.1.0) sha256=ad285968cfaed88cd8f5b9fc50ae64af815f3d4d6d862aa96d01c64a5f669815
   ruby_llm-template (0.1.6) sha256=163e1f195276df31596af1862a43cb4b7ed256e9fa7a7802690c728748c1702a
   securerandom (0.4.1) sha256=cc5193d414a4341b6e225f0cb4446aceca8e50d5e1888743fac16987638ea0b1
+  self_agency (0.0.1) sha256=e1d659d5d71316149599478d9042f95814f3899f698d94a0a73aa65294701704
   simple_flow (0.3.0) sha256=f365506159d25625836db44d19484f7a337fdcd75aa06eae6d4d24c333ad618c
   sinatra (4.2.1) sha256=b7aeb9b11d046b552972ade834f1f9be98b185fa8444480688e3627625377080
   state_machines (0.100.4) sha256=dd4e555ebb061569dd8fe18a5f39b51d10be6306b89a0c315a9697671d752565

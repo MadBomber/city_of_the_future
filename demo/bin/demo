@@ -93,6 +93,17 @@ agency = SelfAgencyBridge.new(robot: code_gen_robot, logger: $logger)
 agency.attach(bus)
 $logger.info "SelfAgencyBridge attached"
 
+# --- Scenario Player ---
+
+require_relative "../lib/scenario/player"
+
+calls_path = ENV.fetch("DEMO_CALLS", File.expand_path("../scenarios/demo_calls.yml", __dir__))
+
+player = ScenarioPlayer.new(scenario_path: calls_path, logger: $logger)
+player.attach(bus)
+player.on_phase { |name| $logger.info "=== PHASE: #{name} ===" }
+$logger.info "ScenarioPlayer loaded (#{calls_path})"
+
 # --- Signal handling ---
 
 shutdown = false
@@ -105,13 +116,24 @@ end
 
 # --- Main loop ---
 
-$logger.info "Demo ready, waiting for events..."
+$logger.info "Demo ready, starting scenario..."
 
 Async do
+  # Play the scenario in a background task
+  scenario_task = Async do
+    player.play
+    $logger.info "Scenario playback finished"
+  end
+
+  # Wait for scenario to finish or shutdown signal
   loop do
     break if shutdown
+    break if scenario_task.finished?
     sleep 0.25
   end
+
+  # Allow time for final messages to propagate
+  sleep 1 unless shutdown
 end
 
 # --- Cleanup ---

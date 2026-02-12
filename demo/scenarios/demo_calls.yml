@@ -1,0 +1,76 @@
+---
+phases:
+  - name: "Normal Operations"
+    delay_before: 2
+    calls:
+      - call_id: "C-001"
+        caller: "Maria Santos"
+        location: "4th and Main Street"
+        description: "There's smoke pouring out of the building! The whole second floor is on fire!"
+        severity: high
+        delay: 0
+
+      - call_id: "C-002"
+        caller: "James Wilson"
+        location: "Oak Street and 12th Avenue"
+        description: "Someone just robbed the corner store! They had a gun and ran east on Oak!"
+        severity: critical
+        delay: 5
+
+      - call_id: "C-003"
+        caller: "Lisa Chen"
+        location: "200 Elm Street, Apartment 4B"
+        description: "My husband is having chest pains! He's sweating and can't breathe!"
+        severity: critical
+        delay: 5
+
+      - call_id: "C-004"
+        caller: "Tom Bradley"
+        location: "Industrial Boulevard near the old mill"
+        description: "There's water shooting up from the street! A pipe must have burst!"
+        severity: medium
+        delay: 4
+
+  - name: "Stress"
+    delay_before: 5
+    calls:
+      - call_id: "C-005"
+        caller: "Sarah Kim"
+        location: "7th and Pine Street"
+        description: "A car crashed into a gas station! There's fuel everywhere and I see flames!"
+        severity: critical
+        delay: 0
+
+      - call_id: "C-006"
+        caller: "Robert Hayes"
+        location: "Downtown parking garage, level 3"
+        description: "There's been a hit and run! A pedestrian is injured and bleeding!"
+        severity: high
+        delay: 3
+
+      - call_id: "C-007"
+        caller: "Amanda Foster"
+        location: "Westside Community Center"
+        description: "An elderly woman collapsed during exercise class! She's not responding!"
+        severity: critical
+        delay: 3
+
+  - name: "The Unknown"
+    delay_before: 6
+    calls:
+      - call_id: "C-008"
+        caller: "Derek Nguyen"
+        location: "Downtown, Central Square"
+        description: "There are drones everywhere downtown! Hundreds of them dropping papers! No one knows who's operating them!"
+        severity: high
+        delay: 0
+
+  - name: "Adaptation"
+    delay_before: 8
+    calls:
+      - call_id: "C-009"
+        caller: "Patricia Moore"
+        location: "Financial District, 5th Avenue"
+        description: "More drones! They're buzzing the office buildings on 5th! People are panicking!"
+        severity: high
+        delay: 0

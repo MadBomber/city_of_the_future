@@ -1,0 +1,10 @@
+source "https://rubygems.org"
+
+ruby ">= 3.2.0"
+
+gem "typed_bus"
+gem "async"
+gem "logger"
+gem "minitest"
+gem "ruby_llm"
+gem "json"

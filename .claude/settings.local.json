@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:sessionize.com)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:rubygems.org)",
+      "WebFetch(domain:worksonmymachine.ai)",
+      "WebFetch(domain:linkedin.com)",
+      "WebFetch(domain:madbomber.github.io)",
+      "WebFetch(domain:rubyllm.com)",
+      "WebFetch(domain:rubydoc.info)",
+      "WebFetch(domain:platform.openai.com)",
+      "Bash(gem contents:*)",
+      "Bash(ruby:*)",
+      "Bash(gem list:*)",
+      "Bash(bundle install:*)",
+      "Bash(bundle exec ruby:*)",
+      "Bash(/Users/dewayne/.claude/plugins/cache/ruby-skills/ruby-skills/0.5.0/skills/ruby-version-manager/detect.sh)",
+      "Bash(gem which:*)"
+    ]
+  }
+}

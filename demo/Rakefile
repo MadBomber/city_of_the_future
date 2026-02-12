@@ -22,6 +22,18 @@ namespace :test do
     t.test_files = ["test/layer2_test.rb"]
     t.warning = false
   end
+
+  Rake::TestTask.new(:layer3) do |t|
+    t.libs << "lib" << "test"
+    t.test_files = ["test/layer3_test.rb"]
+    t.warning = false
+  end
+
+  Rake::TestTask.new(:layer4) do |t|
+    t.libs << "lib" << "test"
+    t.test_files = ["test/layer4_test.rb"]
+    t.warning = false
+  end
 end
 
 task default: :test

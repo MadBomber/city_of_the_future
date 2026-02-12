@@ -33,6 +33,41 @@ scenario_path = nil if scenario_path&.empty?
 handler = LLMMode.setup(bus, mode: mode, scenario_path: scenario_path)
 $logger.info "LLM handler attached in #{mode} mode (#{handler.class})"
 
+# --- Voice I/O ---
+
+require_relative "../lib/voice/speaker"
+
+speaker = Speaker.new(logger: $logger, enabled: ENV["VOICE"] != "off")
+speaker.attach(bus)
+$logger.info "Speaker attached (enabled: #{ENV["VOICE"] != "off"})"
+
+# --- Autonomy (Layer 4) ---
+
+require_relative "../lib/autonomy/governance"
+require_relative "../lib/autonomy/chaos_bridge"
+require_relative "../lib/autonomy/self_agency_bridge"
+
+governance = Governance.new(logger: $logger)
+governance.attach(bus)
+$logger.info "Governance attached"
+
+# Code generation robot (robot_lab)
+require "robot_lab"
+code_gen_robot = RobotLab.build(
+  name: "code_generator",
+  system_prompt: "You are a Ruby code generator for a 911 dispatch system. Generate ONLY def...end method definitions. No class wrappers. No explanations. Methods must be safe — no system/exec/eval/File/IO.",
+  temperature: 0.3
+)
+
+chaos = ChaosBridge.new(robot: code_gen_robot, logger: $logger)
+chaos.attach(bus)
+# chaos.watch(FireDepartment) # Layer 5 will add department classes
+$logger.info "ChaosBridge attached"
+
+agency = SelfAgencyBridge.new(robot: code_gen_robot, logger: $logger)
+agency.attach(bus)
+$logger.info "SelfAgencyBridge attached"
+
 # --- Signal handling ---
 
 shutdown = false

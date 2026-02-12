@@ -1,0 +1,40 @@
+class Speaker
+  VOICES = {
+    dispatch:  "Samantha",
+    caller:    "Reed",
+    fire:      "Daniel",
+    police:    "Karen",
+    ems:       "Moira",
+    utilities: "Fred",
+    council:   "Flo",
+    system:    "Zarvox"
+  }.freeze
+
+  def initialize(logger: nil, enabled: true)
+    @logger  = logger
+    @enabled = enabled
+  end
+
+  def attach(bus)
+    bus.subscribe(:voice_out) do |delivery|
+      vout  = delivery.message
+      voice = VOICES[vout.department&.to_sym] || VOICES[:system]
+
+      if @enabled
+        @logger&.info "Speaking [#{voice}]: #{vout.text}"
+        pid = spawn("say", "-v", voice, vout.text)
+        Process.wait(pid)
+      else
+        @logger&.info "Speaker disabled, skipping [#{voice}]: #{vout.text}"
+      end
+
+      bus.publish(:display, DisplayEvent.new(
+        type:      :voice_spoken,
+        data:      { department: vout.department, text: vout.text, voice: voice },
+        timestamp: Time.now
+      ))
+
+      delivery.ack!
+    end
+  end
+end

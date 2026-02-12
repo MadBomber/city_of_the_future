@@ -179,7 +179,7 @@ class Layer5Test < Minitest::Test
     end
 
     assert llm_request, "Should publish LLMRequest on :llm_requests"
-    assert_match(/intel-C-100/, llm_request.correlation_id)
+    assert_equal "intel-C-100", llm_request.correlation_id
     assert_match(/House on fire/, llm_request.prompt)
   end
 

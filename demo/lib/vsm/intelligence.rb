@@ -1,5 +1,4 @@
 require "json"
-require "securerandom"
 
 class Intelligence
   def initialize(logger: nil)
@@ -25,7 +24,7 @@ class Intelligence
   end
 
   def classify_call(call)
-    correlation_id = "intel-#{call.call_id}-#{SecureRandom.hex(4)}"
+    correlation_id = "intel-#{call.call_id}"
     @pending_calls[correlation_id] = call
     @logger&.info "Intelligence: classifying #{call.call_id} (#{correlation_id})"
 

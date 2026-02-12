@@ -52,6 +52,12 @@ namespace :test do
     t.test_files = ["test/display_bridge_test.rb"]
     t.warning = false
   end
+
+  Rake::TestTask.new(:integration) do |t|
+    t.libs << "lib" << "test"
+    t.test_files = ["test/integration_test.rb"]
+    t.warning = false
+  end
 end
 
 task default: :test

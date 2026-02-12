@@ -1,0 +1,63 @@
+#!/usr/bin/env ruby
+
+require "bundler/setup"
+require "lumberjack"
+require "async"
+
+require_relative "../lib/bus_setup"
+require_relative "../lib/llm_mode"
+
+# --- Logger ---
+
+FileUtils.mkdir_p("log")
+
+$logger = Lumberjack::Logger.new(
+  "log/demo.log",
+  level:      :info,
+  buffer_size: 0
+)
+
+$logger.info "Demo starting (pid #{Process.pid})"
+
+# --- Bus ---
+
+bus = BusSetup.create_bus
+$logger.info "Bus created with #{bus.channel_names.size} channels: #{bus.channel_names.join(', ')}"
+
+# --- LLM mode ---
+
+mode          = ENV.fetch("LLM_MODE", "replay")
+scenario_path = ENV["SCENARIO_PATH"]
+scenario_path = nil if scenario_path&.empty?
+
+handler = LLMMode.setup(bus, mode: mode, scenario_path: scenario_path)
+$logger.info "LLM handler attached in #{mode} mode (#{handler.class})"
+
+# --- Signal handling ---
+
+shutdown = false
+
+%w[TERM INT].each do |sig|
+  trap(sig) do
+    shutdown = true
+  end
+end
+
+# --- Main loop ---
+
+$logger.info "Demo ready, waiting for events..."
+
+Async do
+  loop do
+    break if shutdown
+    sleep 0.25
+  end
+end
+
+# --- Cleanup ---
+
+$logger.info "Shutting down..."
+handler.close if handler.respond_to?(:close)
+bus.close_all
+$logger.info "Demo stopped."
+$logger.close

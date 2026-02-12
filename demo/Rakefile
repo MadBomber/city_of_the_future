@@ -1,0 +1,115 @@
+require "rake/testtask"
+
+PIDFILE = "tmp/demo.pid"
+
+# --- Test tasks ---
+
+Rake::TestTask.new(:test) do |t|
+  t.libs << "lib" << "test"
+  t.test_files = FileList["test/**/*_test.rb"]
+  t.warning = false
+end
+
+namespace :test do
+  Rake::TestTask.new(:layer1) do |t|
+    t.libs << "lib" << "test"
+    t.test_files = ["test/layer1_test.rb"]
+    t.warning = false
+  end
+
+  Rake::TestTask.new(:layer2) do |t|
+    t.libs << "lib" << "test"
+    t.test_files = ["test/layer2_test.rb"]
+    t.warning = false
+  end
+end
+
+task default: :test
+
+# --- Demo lifecycle tasks ---
+
+desc "Start the demo (LLM_MODE=live|record|replay, default: replay)"
+task :start do
+  mkdir_p "tmp"
+  mkdir_p "log"
+  mkdir_p "scenarios"
+
+  if File.exist?(PIDFILE)
+    pid = File.read(PIDFILE).strip.to_i
+    begin
+      Process.kill(0, pid)
+      abort "Demo already running (pid #{pid}). Run `rake stop` first."
+    rescue Errno::ESRCH
+      File.delete(PIDFILE)
+    end
+  end
+
+  mode = ENV.fetch("LLM_MODE", "replay")
+  scenario = ENV["SCENARIO_PATH"]
+
+  puts "Starting demo in #{mode} mode..."
+
+  pid = spawn(
+    { "LLM_MODE" => mode, "SCENARIO_PATH" => scenario.to_s },
+    "ruby", "bin/demo",
+    out: "log/demo.log",
+    err: "log/demo.log"
+  )
+
+  File.write(PIDFILE, pid.to_s)
+  Process.detach(pid)
+  puts "Demo started (pid #{pid}), logging to log/demo.log"
+end
+
+desc "Stop the running demo"
+task :stop do
+  unless File.exist?(PIDFILE)
+    abort "No running demo (#{PIDFILE} not found)."
+  end
+
+  pid = File.read(PIDFILE).strip.to_i
+
+  begin
+    Process.kill("TERM", pid)
+    puts "Sent TERM to demo (pid #{pid})"
+
+    deadline = Time.now + 5
+    loop do
+      Process.kill(0, pid)
+      if Time.now > deadline
+        Process.kill("KILL", pid)
+        puts "Force-killed demo (pid #{pid})"
+        break
+      end
+      sleep 0.2
+    rescue Errno::ESRCH
+      break
+    end
+
+    puts "Demo stopped."
+  rescue Errno::ESRCH
+    puts "Demo process (pid #{pid}) already exited."
+  end
+
+  File.delete(PIDFILE)
+end
+
+desc "Restart the demo"
+task restart: [:stop, :start]
+
+desc "Show demo status"
+task :status do
+  unless File.exist?(PIDFILE)
+    puts "Demo is not running."
+    next
+  end
+
+  pid = File.read(PIDFILE).strip.to_i
+  begin
+    Process.kill(0, pid)
+    puts "Demo is running (pid #{pid})."
+  rescue Errno::ESRCH
+    puts "Demo is not running (stale pidfile)."
+    File.delete(PIDFILE)
+  end
+end

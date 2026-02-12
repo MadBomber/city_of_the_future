@@ -1,6 +1,13 @@
 require "yaml"
 
 class ScenarioPlayer
+  # Human voices for callers, excluding Samantha (dispatch).
+  # Avoids department voices: Daniel, Karen, Moira, Fred, Flo, Zarvox.
+  CALLER_VOICES = %w[
+    Alex Allison Ava Kate Oliver
+    Rishi Tessa Tom Victoria
+  ].freeze
+
   attr_reader :calls_played
 
   def initialize(scenario_path:, logger: nil, skip_delays: false)
@@ -40,13 +47,6 @@ class ScenarioPlayer
       timestamp: Time.now
     ))
 
-    @bus.publish(:voice_out, VoiceOut.new(
-      text:       "Phase: #{phase_name}",
-      voice:      nil,
-      department: "System",
-      priority:   1
-    ))
-
     phase["calls"].each do |call_data|
       wait(call_data["delay"] || 0)
       publish_call(call_data)
@@ -69,6 +69,14 @@ class ScenarioPlayer
   def publish_call(call_data)
     call = build_call(call_data)
     @logger&.info "ScenarioPlayer: [#{call.call_id}] #{call.caller} — #{call.description[0..60]}"
+
+    @bus.publish(:voice_out, VoiceOut.new(
+      text:       call.description,
+      voice:      CALLER_VOICES[@calls_played % CALLER_VOICES.size],
+      department: "Caller",
+      priority:   2
+    ))
+
     @bus.publish(:calls, call)
     @calls_played += 1
   end

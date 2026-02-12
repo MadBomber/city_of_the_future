@@ -20,7 +20,7 @@ class Speaker
   def attach(bus)
     bus.subscribe(:voice_out) do |delivery|
       vout  = delivery.message
-      voice = resolve_voice(vout.department)
+      voice = vout.voice || resolve_voice(vout.department)
 
       if @enabled
         @logger&.info "Speaking [#{voice}]: #{vout.text}"

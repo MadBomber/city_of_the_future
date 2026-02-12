@@ -68,7 +68,7 @@ class Operations
     @bus.publish(:voice_out, VoiceOut.new(
       text:       "#{dept.name} #{result[:unit_id]} dispatched for call #{order.call_id}",
       voice:      nil,
-      department: dept.name,
+      department: "Dispatch",
       priority:   order.priority
     ))
   end

@@ -221,7 +221,7 @@ class ScenarioPlayerTest < Minitest::Test
     end
   end
 
-  def test_publishes_voice_out_for_phase_announcements
+  def test_no_voice_out_for_phase_announcements
     scenario = {
       "phases" => [
         { "name" => "Opening", "delay_before" => 0, "calls" => [] }
@@ -248,9 +248,73 @@ class ScenarioPlayerTest < Minitest::Test
         sleep 0.05
       end
 
-      assert_equal 1, voice_events.size
-      assert_match(/Opening/, voice_events.first.text)
-      assert_equal "System", voice_events.first.department
+      assert_empty voice_events, "Phase changes should not produce voice events"
+    end
+  end
+
+  # ==========================================
+  # Caller voice narration
+  # ==========================================
+
+  def test_publishes_caller_voice_before_each_call
+    scenario = {
+      "phases" => [
+        {
+          "name" => "Test",
+          "delay_before" => 0,
+          "calls" => [
+            { "call_id" => "V-1", "caller" => "Alice", "location" => "A St",
+              "description" => "Fire in the kitchen!", "severity" => "high", "delay" => 0 },
+            { "call_id" => "V-2", "caller" => "Bob", "location" => "B St",
+              "description" => "Someone broke in!", "severity" => "critical", "delay" => 0 }
+          ]
+        }
+      ]
+    }
+
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "voice_caller.yml")
+      File.write(path, YAML.dump(scenario))
+
+      player = ScenarioPlayer.new(scenario_path: path, skip_delays: true)
+      player.attach(@bus)
+
+      voice_events = []
+      @bus.subscribe(:voice_out) do |delivery|
+        voice_events << delivery.message
+        delivery.ack!
+      end
+
+      calls = []
+      @bus.subscribe(:calls) do |delivery|
+        calls << delivery.message
+        delivery.ack!
+      end
+
+      @bus.subscribe(:display) { |d| d.ack! }
+
+      Async do
+        player.play
+        sleep 0.05
+      end
+
+      caller_voices = voice_events.select { |v| v.department == "Caller" }
+      assert_equal 2, caller_voices.size, "Should publish one caller voice per call"
+
+      assert_equal "Fire in the kitchen!", caller_voices[0].text
+      assert_equal "Someone broke in!", caller_voices[1].text
+
+      # Each caller gets a distinct voice from the rotation
+      assert_equal "Alex", caller_voices[0].voice
+      assert_equal "Allison", caller_voices[1].voice
+      refute_equal caller_voices[0].voice, caller_voices[1].voice
+
+      # No caller should use Samantha (dispatch voice)
+      caller_voices.each do |v|
+        refute_equal "Samantha", v.voice, "Caller voice must not be the dispatch voice"
+      end
+
+      assert_equal 2, calls.size, "Calls should still be published"
     end
   end
 

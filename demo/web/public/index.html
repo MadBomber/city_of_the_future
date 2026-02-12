@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Giving Robots Free Will — City 911 Simulation</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <h1>GIVING ROBOTS FREE WILL</h1>
+    <div id="phase-indicator">City 911 Simulation</div>
+  </header>
+
+  <div id="dashboard">
+    <div id="map-panel" class="panel">
+      <h2>City Map</h2>
+      <svg id="city-map" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+        <!-- Street grid -->
+        <g class="streets" stroke="#2a2a4a" stroke-width="1" opacity="0.6">
+          <!-- Horizontal streets -->
+          <line x1="0" y1="60" x2="400" y2="60"/>
+          <line x1="0" y1="120" x2="400" y2="120"/>
+          <line x1="0" y1="180" x2="400" y2="180"/>
+          <line x1="0" y1="240" x2="400" y2="240"/>
+          <!-- Vertical streets -->
+          <line x1="80" y1="0" x2="80" y2="300"/>
+          <line x1="160" y1="0" x2="160" y2="300"/>
+          <line x1="240" y1="0" x2="240" y2="300"/>
+          <line x1="320" y1="0" x2="320" y2="300"/>
+        </g>
+        <!-- Street labels -->
+        <g class="street-labels" fill="#3a3a5a" font-size="8" font-family="monospace">
+          <text x="5" y="55">Main St</text>
+          <text x="5" y="115">Oak St</text>
+          <text x="5" y="175">Elm St</text>
+          <text x="5" y="235">Industrial</text>
+          <text x="82" y="12">4th</text>
+          <text x="162" y="12">7th</text>
+          <text x="242" y="12">12th</text>
+          <text x="315" y="12">Pine</text>
+        </g>
+        <!-- Downtown label -->
+        <text x="180" y="150" fill="#2a2a4a" font-size="10" font-family="monospace" text-anchor="middle">DOWNTOWN</text>
+        <!-- Emergency markers added dynamically -->
+        <g id="map-markers"></g>
+      </svg>
+    </div>
+
+    <div id="calls-panel" class="panel">
+      <h2>Active Calls</h2>
+      <div id="calls-list"></div>
+    </div>
+
+    <div id="dept-panel" class="panel">
+      <h2>Department Status</h2>
+      <div id="dept-status">
+        <div class="dept-row" data-dept="Fire">
+          <span class="dept-dot" style="background:#ff4444"></span>
+          <span class="dept-name">Fire</span>
+          <div class="dept-bar"><div class="dept-fill" style="width:100%;background:#ff4444"></div></div>
+          <span class="dept-units">5/5</span>
+        </div>
+        <div class="dept-row" data-dept="Police">
+          <span class="dept-dot" style="background:#4488ff"></span>
+          <span class="dept-name">Police</span>
+          <div class="dept-bar"><div class="dept-fill" style="width:100%;background:#4488ff"></div></div>
+          <span class="dept-units">4/4</span>
+        </div>
+        <div class="dept-row" data-dept="EMS">
+          <span class="dept-dot" style="background:#44bb44"></span>
+          <span class="dept-name">EMS</span>
+          <div class="dept-bar"><div class="dept-fill" style="width:100%;background:#44bb44"></div></div>
+          <span class="dept-units">3/3</span>
+        </div>
+        <div class="dept-row" data-dept="Utilities">
+          <span class="dept-dot" style="background:#ffaa44"></span>
+          <span class="dept-name">Utilities</span>
+          <div class="dept-bar"><div class="dept-fill" style="width:100%;background:#ffaa44"></div></div>
+          <span class="dept-units">2/2</span>
+        </div>
+        <div class="dept-row" data-dept="CityCouncil">
+          <span class="dept-dot" style="background:#ffffff"></span>
+          <span class="dept-name">Council</span>
+          <div class="dept-bar"><div class="dept-fill" style="width:100%;background:#ffffff"></div></div>
+          <span class="dept-units">1/1</span>
+        </div>
+      </div>
+      <div id="governance-stats">
+        <div>Methods generated: <span id="gen-count">0</span></div>
+        <div>Methods approved: <span id="approved-count">0</span></div>
+        <div>Methods rejected: <span id="rejected-count">0</span></div>
+      </div>
+    </div>
+
+    <div id="events-panel" class="panel">
+      <h2>Event Stream</h2>
+      <div id="event-stream"></div>
+    </div>
+  </div>
+
+  <footer id="bus-stats">
+    <span>typed_bus:</span>
+    <span>published <strong id="stat-published">0</strong></span>
+    <span>delivered <strong id="stat-delivered">0</strong></span>
+    <span>nacked <strong id="stat-nacked">0</strong></span>
+    <span>DLQ <strong id="stat-dlq">0</strong></span>
+  </footer>
+
+  <script src="/dashboard.js"></script>
+</body>
+</html>

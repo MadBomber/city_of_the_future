@@ -93,6 +93,29 @@ agency = SelfAgencyBridge.new(robot: code_gen_robot, logger: $logger)
 agency.attach(bus)
 $logger.info "SelfAgencyBridge attached"
 
+# --- Web Dashboard ---
+
+require_relative "../lib/web/display_bridge"
+require_relative "../web/app"
+
+display_bridge = DisplayBridge.new
+display_bridge.attach(bus)
+
+dashboard_port = ENV.fetch("DASHBOARD_PORT", "4567").to_i
+DashboardApp.set :bridge, display_bridge
+DashboardApp.set :bus, bus
+DashboardApp.set :port, dashboard_port
+DashboardApp.set :bind, "0.0.0.0"
+DashboardApp.set :environment, :production
+
+web_thread = Thread.new do
+  DashboardApp.run!
+rescue => e
+  $logger.error "Dashboard error: #{e.message}"
+end
+
+$logger.info "Dashboard starting on http://localhost:#{dashboard_port}"
+
 # --- Scenario Player ---
 
 require_relative "../lib/scenario/player"

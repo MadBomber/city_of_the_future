@@ -151,10 +151,13 @@ GEM
     minitest (6.0.1)
       prism (~> 1.5)
     multipart-post (2.4.1)
+    mustermann (3.0.4)
+      ruby2_keywords (~> 0.0.1)
     myway_config (0.1.2)
       anyway_config (>= 2.0)
     net-http (0.9.1)
       uri (>= 0.11.1)
+    nio4r (2.7.5)
     nokogiri (1.19.0-arm64-darwin)
       racc (~> 1.4)
     onnxruntime (0.10.1-arm64-darwin)
@@ -181,8 +184,14 @@ GEM
       date
       stringio
     public_suffix (7.0.2)
+    puma (7.2.0)
+      nio4r (~> 2.0)
     racc (1.8.1)
     rack (3.2.4)
+    rack-protection (4.2.1)
+      base64 (>= 0.1.0)
+      logger (>= 1.6.0)
+      rack (>= 3.0.0, < 4)
     rack-session (2.1.1)
       base64 (>= 0.1.0)
       rack (>= 3.0.0)
@@ -214,6 +223,7 @@ GEM
     reline (0.6.3)
       io-console (~> 0.5)
     ruby-next-core (1.2.0)
+    ruby2_keywords (0.0.5)
     ruby_llm (1.11.0)
       base64
       event_stream_parser (~> 1)
@@ -237,6 +247,13 @@ GEM
       ruby_llm-schema (>= 0.2.0)
     securerandom (0.4.1)
     simple_flow (0.3.0)
+    sinatra (4.2.1)
+      logger (>= 1.6.0)
+      mustermann (~> 3.0)
+      rack (>= 3.0.0, < 4)
+      rack-protection (= 4.2.1)
+      rack-session (>= 2.0.0, < 3)
+      tilt (~> 2.0)
     state_machines (0.100.4)
     state_machines-activemodel (0.101.0)
       activemodel (>= 7.2)
@@ -246,6 +263,7 @@ GEM
       state_machines-activemodel (>= 0.100.0)
     stringio (3.2.0)
     thor (1.5.0)
+    tilt (2.7.0)
     timeout (0.6.0)
     tokenizers (0.6.3-arm64-darwin)
     traces (0.18.2)
@@ -270,10 +288,13 @@ DEPENDENCIES
   logger
   lumberjack
   minitest
+  puma
+  rackup
   rake
   robot_lab!
   ruby_llm
   ruby_llm-mcp
+  sinatra
   typed_bus
   whispercpp (~> 1.3)
 
@@ -329,8 +350,10 @@ CHECKSUMS
   metrics (0.15.0) sha256=61ded5bac95118e995b1bc9ed4a5f19bc9814928a312a85b200abbdac9039072
   minitest (6.0.1) sha256=7854c74f48e2e975969062833adc4013f249a4b212f5e7b9d5c040bf838d54bb
   multipart-post (2.4.1) sha256=9872d03a8e552020ca096adadbf5e3cb1cd1cdd6acd3c161136b8a5737cdb4a8
+  mustermann (3.0.4) sha256=85fadcb6b3c6493a8b511b42426f904b7f27b282835502233dd154daab13aa22
   myway_config (0.1.2) sha256=c91741ded05babc443fcf5d012741ded8a1a1998c40a689cb32af27940b66be3
   net-http (0.9.1) sha256=25ba0b67c63e89df626ed8fac771d0ad24ad151a858af2cc8e6a716ca4336996
+  nio4r (2.7.5) sha256=6c90168e48fb5f8e768419c93abb94ba2b892a1d0602cb06eef16d8b7df1dca1
   nokogiri (1.19.0-arm64-darwin) sha256=0811dfd936d5f6dd3f6d32ef790568bf29b2b7bead9ba68866847b33c9cf5810
   onnxruntime (0.10.1-arm64-darwin) sha256=8afc0feaa03bd969c4c0f43379254106ac90dbb548c8bb2cae4cca25f19771b7
   pp (0.6.3) sha256=2951d514450b93ccfeb1df7d021cae0da16e0a7f95ee1e2273719669d0ab9df6
@@ -345,8 +368,10 @@ CHECKSUMS
   protocol-websocket (0.20.2) sha256=c41d93c35fba5dae85375c597f76975f3dbd75d8c5b2f21b33dab4dc22a5a511
   psych (5.3.1) sha256=eb7a57cef10c9d70173ff74e739d843ac3b2c019a003de48447b2963d81b1974
   public_suffix (7.0.2) sha256=9114090c8e4e7135c1fd0e7acfea33afaab38101884320c65aaa0ffb8e26a857
+  puma (7.2.0) sha256=bf8ef4ab514a4e6d4554cb4326b2004eba5036ae05cf765cfe51aba9706a72a8
   racc (1.8.1) sha256=4a7f6929691dbec8b5209a0b373bc2614882b55fc5d2e447a21aaa691303d62f
   rack (3.2.4) sha256=5d74b6f75082a643f43c1e76b419c40f0e5527fcfee1e669ac1e6b73c0ccb6f6
+  rack-protection (4.2.1) sha256=cf6e2842df8c55f5e4d1a4be015e603e19e9bc3a7178bae58949ccbb58558bac
   rack-session (2.1.1) sha256=0b6dc07dea7e4b583f58a48e8b806d4c9f1c6c9214ebc202ec94562cbea2e4e9
   rack-test (2.2.0) sha256=005a36692c306ac0b4a9350355ee080fd09ddef1148a5f8b2ac636c720f5c463
   rackup (2.3.1) sha256=6c79c26753778e90983761d677a48937ee3192b3ffef6bc963c0950f94688868
@@ -358,6 +383,7 @@ CHECKSUMS
   reline (0.6.3) sha256=1198b04973565b36ec0f11542ab3f5cfeeec34823f4e54cebde90968092b1835
   robot_lab (0.0.1)
   ruby-next-core (1.2.0) sha256=f6a7d00bb5186cecbb02f7f1845a0f3a2c9788d35b6ccff5c9be3f0d46799b86
+  ruby2_keywords (0.0.5) sha256=ffd13740c573b7301cf7a2e61fc857b2a8e3d3aff32545d6f8300d8bae10e3ef
   ruby_llm (1.11.0) sha256=c1bc17bb02a7e805d8f62ea6ada2ecfe7782fc955e9440b53a2fdbd00e5ec9cc
   ruby_llm-mcp (0.8.0) sha256=74350b6c08eeb8bf1c387dc7192bb21bad8415d21277b9a922c182b2e8c29915
   ruby_llm-schema (0.2.5) sha256=b08cd42e8de7100325e2e868672a56f1915eb23692bb808f51f214e41392104f
@@ -365,11 +391,13 @@ CHECKSUMS
   ruby_llm-template (0.1.6) sha256=163e1f195276df31596af1862a43cb4b7ed256e9fa7a7802690c728748c1702a
   securerandom (0.4.1) sha256=cc5193d414a4341b6e225f0cb4446aceca8e50d5e1888743fac16987638ea0b1
   simple_flow (0.3.0) sha256=f365506159d25625836db44d19484f7a337fdcd75aa06eae6d4d24c333ad618c
+  sinatra (4.2.1) sha256=b7aeb9b11d046b552972ade834f1f9be98b185fa8444480688e3627625377080
   state_machines (0.100.4) sha256=dd4e555ebb061569dd8fe18a5f39b51d10be6306b89a0c315a9697671d752565
   state_machines-activemodel (0.101.0) sha256=6798c6bf5aa4be2b1a00ca633949c999ebee7a148bd4ea8f6858b189e2cdf72d
   state_machines-activerecord (0.100.0) sha256=b2213f74f3f32c6d92de5139e8898bc64a0ffb3f048df7d950ce27e28384beb5
   stringio (3.2.0) sha256=c37cb2e58b4ffbd33fe5cd948c05934af997b36e0b6ca6fdf43afa234cf222e1
   thor (1.5.0) sha256=e3a9e55fe857e44859ce104a84675ab6e8cd59c650a49106a05f55f136425e73
+  tilt (2.7.0) sha256=0d5b9ba69f6a36490c64b0eee9f6e9aad517e20dcc848800a06eb116f08c6ab3
   timeout (0.6.0) sha256=6d722ad619f96ee383a0c557ec6eb8c4ecb08af3af62098a0be5057bf00de1af
   tokenizers (0.6.3-arm64-darwin) sha256=29a6a5582dce106d846a906ee9e4254c12db45a3855c3ff6881d4be8be03e6b6
   traces (0.18.2) sha256=80f1649cb4daace1d7174b81f3b3b7427af0b93047759ba349960cb8f315e214

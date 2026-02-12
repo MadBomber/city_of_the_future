@@ -1,0 +1,285 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #0d0d1a;
+  color: #d0d0e0;
+  font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+  font-size: 13px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+header {
+  background: #12122a;
+  padding: 10px 20px;
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+  border-bottom: 1px solid #2a2a4a;
+}
+
+header h1 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #00ffaa;
+  letter-spacing: 2px;
+}
+
+#phase-indicator {
+  font-size: 14px;
+  color: #8888aa;
+  transition: color 0.3s;
+}
+
+#phase-indicator.active {
+  color: #ffaa44;
+}
+
+#dashboard {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 1px;
+  background: #1a1a2e;
+  min-height: 0;
+}
+
+.panel {
+  background: #12122a;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.panel h2 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #5a5a7a;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+/* City Map */
+
+#city-map {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}
+
+.map-marker {
+  transition: opacity 0.3s;
+}
+
+.map-marker circle {
+  stroke-width: 2;
+  stroke-opacity: 0.8;
+}
+
+.map-marker text {
+  font-size: 7px;
+  font-family: monospace;
+  fill: #d0d0e0;
+}
+
+.map-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { r: 6; opacity: 1; }
+  50% { r: 10; opacity: 0.5; }
+}
+
+/* Active Calls */
+
+#calls-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.call-card {
+  background: #1a1a2e;
+  border-left: 3px solid #5a5a7a;
+  padding: 6px 10px;
+  margin-bottom: 4px;
+  border-radius: 0 4px 4px 0;
+  transition: border-color 0.3s, background 0.3s;
+}
+
+.call-card.fire     { border-color: #ff4444; }
+.call-card.police   { border-color: #4488ff; }
+.call-card.ems      { border-color: #44bb44; }
+.call-card.utilities { border-color: #ffaa44; }
+.call-card.unknown  { border-color: #ff44ff; }
+.call-card.escalated { border-color: #ff44ff; background: #1a0a2e; }
+.call-card.resolved { border-color: #2a2a4a; opacity: 0.5; }
+
+.call-id {
+  font-weight: 700;
+  font-size: 11px;
+}
+
+.call-dept {
+  float: right;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: #2a2a4a;
+  color: #aaaacc;
+}
+
+.call-desc {
+  font-size: 11px;
+  color: #8888aa;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.call-status {
+  font-size: 10px;
+  color: #00ffaa;
+  margin-top: 2px;
+}
+
+/* Department Status */
+
+#dept-status {
+  flex-shrink: 0;
+}
+
+.dept-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.dept-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dept-name {
+  width: 60px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.dept-bar {
+  flex: 1;
+  height: 12px;
+  background: #1a1a2e;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.dept-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+.dept-units {
+  font-size: 11px;
+  color: #8888aa;
+  width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+#governance-stats {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #2a2a4a;
+  font-size: 11px;
+  color: #5a5a7a;
+}
+
+#governance-stats div { margin-bottom: 2px; }
+#governance-stats span { color: #00ffaa; }
+
+/* Event Stream */
+
+#event-stream {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  font-size: 11px;
+}
+
+.event-line {
+  padding: 2px 0;
+  border-bottom: 1px solid #1a1a2e;
+  display: flex;
+  gap: 8px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.event-time {
+  color: #4a4a6a;
+  flex-shrink: 0;
+  width: 70px;
+}
+
+.event-tag {
+  font-size: 10px;
+  padding: 0 4px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  min-width: 55px;
+  text-align: center;
+}
+
+.event-tag.call       { background: #2a1a1a; color: #ff6666; }
+.event-tag.dispatch   { background: #1a2a1a; color: #66ff66; }
+.event-tag.escalation { background: #2a1a2a; color: #ff66ff; }
+.event-tag.method     { background: #1a1a2a; color: #6666ff; }
+.event-tag.governance { background: #2a2a1a; color: #ffff66; }
+.event-tag.phase      { background: #1a2a2a; color: #00ffaa; }
+.event-tag.system     { background: #1a1a2a; color: #8888aa; }
+
+.event-text {
+  color: #aaaacc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Bus Stats Footer */
+
+footer {
+  background: #0a0a18;
+  padding: 6px 20px;
+  font-size: 11px;
+  color: #4a4a6a;
+  display: flex;
+  gap: 20px;
+  border-top: 1px solid #2a2a4a;
+}
+
+footer strong {
+  color: #00ffaa;
+}
+
+/* Scrollbar */
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #2a2a4a; border-radius: 2px; }

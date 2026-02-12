@@ -3,6 +3,15 @@
 require "bundler/setup"
 require "lumberjack"
 require "async"
+require "optparse"
+
+options = { replay: false, voice: ENV["VOICE"] != "off" }
+
+OptionParser.new do |opts|
+  opts.banner = "Usage: demo [options]"
+  opts.on("--replay", "Run the scenario player with pre-scripted calls") { options[:replay] = true }
+  opts.on("--no-voice", "Disable text-to-speech output")                { options[:voice] = false }
+end.parse!
 
 require_relative "../lib/bus_setup"
 require_relative "../lib/llm_mode"
@@ -37,9 +46,9 @@ $logger.info "LLM handler attached in #{mode} mode (#{handler.class})"
 
 require_relative "../lib/voice/speaker"
 
-speaker = Speaker.new(logger: $logger, enabled: ENV["VOICE"] != "off")
+speaker = Speaker.new(logger: $logger, enabled: options[:voice])
 speaker.attach(bus)
-$logger.info "Speaker attached (enabled: #{ENV["VOICE"] != "off"})"
+$logger.info "Speaker attached (enabled: #{options[:voice]})"
 
 # --- VSM Capsule (Layer 5) ---
 
@@ -109,9 +118,12 @@ require_relative "../web/app"
 display_bridge = DisplayBridge.new
 display_bridge.attach(bus)
 
+call_queue = Thread::Queue.new
+
 dashboard_port = ENV.fetch("DASHBOARD_PORT", "4567").to_i
 DashboardApp.set :bridge, display_bridge
 DashboardApp.set :bus, bus
+DashboardApp.set :call_queue, call_queue
 DashboardApp.set :port, dashboard_port
 DashboardApp.set :bind, "0.0.0.0"
 DashboardApp.set :environment, :production
@@ -124,16 +136,22 @@ end
 
 $logger.info "Dashboard starting on http://localhost:#{dashboard_port}"
 
-# --- Scenario Player ---
+# --- Scenario Player (optional) ---
 
 require_relative "../lib/scenario/player"
 
-calls_path = ENV.fetch("DEMO_CALLS", File.expand_path("../scenarios/demo_calls.yml", __dir__))
+player = nil
 
-player = ScenarioPlayer.new(scenario_path: calls_path, logger: $logger)
-player.attach(bus)
-player.on_phase { |name| $logger.info "=== PHASE: #{name} ===" }
-$logger.info "ScenarioPlayer loaded (#{calls_path})"
+if options[:replay]
+  calls_path = ENV.fetch("DEMO_CALLS", File.expand_path("../scenarios/demo_calls.yml", __dir__))
+
+  player = ScenarioPlayer.new(scenario_path: calls_path, logger: $logger)
+  player.attach(bus)
+  player.on_phase { |name| $logger.info "=== PHASE: #{name} ===" }
+  $logger.info "ScenarioPlayer loaded (#{calls_path})"
+else
+  $logger.info "No scenario player — waiting for live input"
+end
 
 # --- Signal handling ---
 
@@ -147,24 +165,52 @@ end
 
 # --- Main loop ---
 
-$logger.info "Demo ready, starting scenario..."
+$logger.info "Demo ready#{player ? ', starting scenario...' : ', waiting for input...'}"
 
 Async do
-  # Play the scenario in a background task
-  scenario_task = Async do
-    player.play
-    $logger.info "Scenario playback finished"
+  # Drain dashboard call queue into the bus (runs in Async context)
+  live_call_count = 0
+  caller_voices = ScenarioPlayer::CALLER_VOICES
+
+  queue_task = Async do
+    until shutdown
+      while (call = call_queue.pop(true) rescue nil)
+        $logger.info "Dashboard call: [#{call.call_id}] #{call.caller} — #{call.description[0..60]}"
+
+        bus.publish(:voice_out, VoiceOut.new(
+          text:       call.description,
+          voice:      caller_voices[live_call_count % caller_voices.size],
+          department: "Caller",
+          priority:   2
+        ))
+
+        bus.publish(:calls, call)
+        live_call_count += 1
+      end
+      sleep 0.1
+    end
   end
 
-  # Wait for scenario to finish or shutdown signal
-  loop do
-    break if shutdown
-    break if scenario_task.finished?
-    sleep 0.25
+  if player
+    scenario_task = Async do
+      player.play
+      $logger.info "Scenario playback finished"
+    end
+
+    loop do
+      break if shutdown
+      break if scenario_task.finished?
+      sleep 0.25
+    end
+
+    # Allow time for final messages to propagate (autonomy pipeline needs time)
+    sleep 5 unless shutdown
+  else
+    # Live mode — run until shutdown signal
+    sleep 0.25 until shutdown
   end
 
-  # Allow time for final messages to propagate (autonomy pipeline needs time)
-  sleep 5 unless shutdown
+  queue_task.stop
 end
 
 # --- Cleanup ---

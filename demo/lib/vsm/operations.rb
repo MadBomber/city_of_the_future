@@ -1,7 +1,8 @@
 class Operations
   def initialize(logger: nil)
-    @logger      = logger
-    @departments = {}  # :name => department
+    @logger           = logger
+    @departments      = {}  # :name => department
+    @pending_resolves = {}  # voice_text => [call_id, dept, unit_id]
   end
 
   def register(dept)
@@ -13,6 +14,15 @@ class Operations
 
     bus.subscribe(:dispatch) do |delivery|
       handle_dispatch(delivery.message)
+      delivery.ack!
+    end
+
+    bus.subscribe(:display) do |delivery|
+      evt = delivery.message
+      if evt.type == :voice_spoken && evt.data[:department] == "Dispatch"
+        pending = @pending_resolves.delete(evt.data[:text])
+        schedule_resolve(*pending) if pending
+      end
       delivery.ack!
     end
   end
@@ -65,12 +75,32 @@ class Operations
       timestamp: Time.now
     ))
 
+    voice_text = "#{dept.name} #{result[:unit_id]} dispatched for call #{order.call_id}"
+
+    @pending_resolves[voice_text] = [order.call_id, dept, result[:unit_id]]
+
     @bus.publish(:voice_out, VoiceOut.new(
-      text:       "#{dept.name} #{result[:unit_id]} dispatched for call #{order.call_id}",
+      text:       voice_text,
       voice:      "Samantha",
       department: "Dispatch",
       priority:   order.priority
     ))
+  end
+
+  def schedule_resolve(call_id, dept, unit_id)
+    Async do
+      sleep rand(5.0..10.0)
+      dept.resolve(call_id)
+      @logger&.info "Operations: resolved #{call_id} — #{dept.name} #{unit_id} available"
+
+      @bus.publish(:department_status, dept.to_dept_status)
+
+      @bus.publish(:display, DisplayEvent.new(
+        type:      :call_resolved,
+        data:      { call_id: call_id, department: dept.name, unit_id: unit_id },
+        timestamp: Time.now
+      ))
+    end
   end
 
   def escalate(order, reason, attempted = [])

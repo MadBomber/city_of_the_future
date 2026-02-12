@@ -263,6 +263,38 @@ header h1 {
   text-overflow: ellipsis;
 }
 
+/* Quick Calls */
+
+#quick-calls {
+  background: #0a0a18;
+  padding: 6px 20px;
+  display: flex;
+  gap: 8px;
+  border-top: 1px solid #2a2a4a;
+}
+
+.quick-call {
+  font-family: inherit;
+  font-size: 11px;
+  padding: 4px 12px;
+  border: 1px solid #2a2a4a;
+  border-radius: 3px;
+  background: #1a1a2e;
+  color: #d0d0e0;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.quick-call:hover {
+  background: #2a2a4a;
+  border-color: #00ffaa;
+}
+
+.quick-call:active {
+  background: #00ffaa;
+  color: #0d0d1a;
+}
+
 /* Bus Stats Footer */
 
 footer {

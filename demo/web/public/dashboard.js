@@ -46,9 +46,10 @@
   };
 
   evtSource.onerror = function() {
+    evtSource.close();
     setTimeout(function() {
-      addEventLine("system", "system", "SSE reconnecting...");
-    }, 1000);
+      location.reload();
+    }, 2000);
   };
 
   // --- Stats Polling ---
@@ -118,6 +119,9 @@
       case "governance_event":
         handleGovernanceEvent(evt);
         break;
+      case "call_resolved":
+        handleCallResolved(evt);
+        break;
       case "voice_spoken":
         addEventLine(evt.timestamp, "system", (evt.data.department || "System") + ': "' + truncate(evt.data.text, 60) + '"');
         break;
@@ -179,7 +183,8 @@
   function handleDeptStatus(evt) {
     var d = evt.data;
     var total = deptTotals[d.department] || (d.available_units + d.active_calls);
-    updateDeptRow(d.department, d.available_units, total, d.capacity_pct);
+    var utilization = total > 0 ? d.active_calls / total : 0;
+    updateDeptRow(d.department, d.active_calls, total, utilization);
   }
 
   function handleEscalation(evt) {
@@ -231,6 +236,16 @@
     updateMapMarker(d.call_id, "#44ffaa");
   }
 
+  function handleCallResolved(evt) {
+    var d = evt.data;
+    if (calls[d.call_id]) {
+      calls[d.call_id].status = "resolved";
+    }
+    addEventLine(evt.timestamp, "dispatch", d.department + " " + d.unit_id + " resolved " + d.call_id);
+    renderCalls();
+    updateMapMarker(d.call_id, "#2a2a4a");
+  }
+
   function handleGovernanceEvent(evt) {
     var d = evt.data;
     var tag = d.decision === "approved" || d.decision === ":approved" ? "governance" : "escalation";
@@ -273,13 +288,13 @@
     return "unknown";
   }
 
-  function updateDeptRow(name, available, total, pct) {
+  function updateDeptRow(name, active, total, utilization) {
     var row = document.querySelector('.dept-row[data-dept="' + name + '"]');
     if (!row) return;
     var fill = row.querySelector(".dept-fill");
     var units = row.querySelector(".dept-units");
-    fill.style.width = (pct * 100) + "%";
-    units.textContent = available + "/" + total;
+    fill.style.width = (utilization * 100) + "%";
+    units.textContent = active + "/" + total;
   }
 
   function addEventLine(timestamp, tag, text) {
@@ -375,6 +390,34 @@
     var div = document.createElement("div");
     div.textContent = s;
     return div.innerHTML;
+  }
+
+  // --- Quick Call Buttons ---
+
+  var quickButtons = document.querySelectorAll(".quick-call");
+  for (var i = 0; i < quickButtons.length; i++) {
+    quickButtons[i].addEventListener("click", function() {
+      var btn = this;
+      var payload = {
+        caller:      btn.getAttribute("data-caller"),
+        location:    btn.getAttribute("data-location"),
+        description: btn.getAttribute("data-description"),
+        severity:    btn.getAttribute("data-severity")
+      };
+
+      fetch("/calls", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        addEventLine(new Date().toLocaleTimeString(), "system", "Submitted " + data.call_id);
+      })
+      .catch(function(err) {
+        addEventLine(new Date().toLocaleTimeString(), "system", "Submit failed: " + err);
+      });
+    });
   }
 
   // Initial event

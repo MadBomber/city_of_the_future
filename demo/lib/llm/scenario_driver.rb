@@ -24,9 +24,9 @@ class ScenarioDriver
           correlation_id: req.correlation_id
         ))
       else
-        warn "SCENARIO: No recorded response for #{req.correlation_id}"
+        dept = classify_from_prompt(req.prompt)
         bus.publish(:llm_responses, LLMResponse.new(
-          content:        '{"error":"no recorded response"}',
+          content:        "{\"department\":\"#{dept}\",\"priority\":2,\"units_requested\":1,\"eta\":\"5min\"}",
           tool_calls:     nil,
           tokens:         0,
           correlation_id: req.correlation_id
@@ -35,5 +35,25 @@ class ScenarioDriver
 
       delivery.ack!
     end
+  end
+
+  private
+
+  KEYWORDS = {
+    "fire"      => %w[fire smoke flames burning blaze explosion],
+    "police"    => %w[robbed robbery gun theft stolen broke\ in assault weapon],
+    "ems"       => %w[chest\ pain breathing heart collapsed injured bleeding unconscious],
+    "utilities" => %w[water pipe burst power outage gas\ leak sewer electrical]
+  }.freeze
+
+  def classify_from_prompt(prompt)
+    text = prompt.to_s
+    description = text[/Description:\s*(.+)/i, 1] || text
+    desc = description.downcase
+
+    KEYWORDS.each do |dept, words|
+      return dept if words.any? { |w| desc.include?(w) }
+    end
+    "unknown"
   end
 end

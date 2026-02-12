@@ -35,6 +35,26 @@ class DashboardApp < Sinatra::Base
     end
   end
 
+  post "/calls" do
+    content_type :json
+    body = JSON.parse(request.body.read)
+
+    call_id = "L-#{Time.now.strftime('%H%M%S')}"
+
+    call = EmergencyCall.new(
+      call_id:     call_id,
+      caller:      body["caller"] || "Dashboard",
+      location:    body["location"] || "Unknown",
+      description: body["description"],
+      severity:    (body["severity"] || "high").to_sym,
+      timestamp:   Time.now
+    )
+
+    settings.call_queue << call
+
+    JSON.generate({ call_id: call_id, status: "queued" })
+  end
+
   get "/stats" do
     content_type :json
     bus = settings.bus

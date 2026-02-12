@@ -76,7 +76,7 @@ task default: :test
 
 # --- Demo lifecycle tasks ---
 
-desc "Start the demo (LLM_MODE=live|record|replay, default: replay)"
+desc "Start the demo (REPLAY=1 for scenario playback, VOICE=off to mute)"
 task :start do
   mkdir_p "tmp"
   mkdir_p "log"
@@ -93,13 +93,18 @@ task :start do
   end
 
   mode = ENV.fetch("LLM_MODE", "replay")
-  scenario = ENV["SCENARIO_PATH"]
+  replay = ENV["REPLAY"] == "1"
 
-  puts "Starting demo in #{mode} mode..."
+  args = ["ruby", "bin/demo"]
+  args << "--replay" if replay
+  args << "--no-voice" if ENV["VOICE"] == "off"
+
+  label = replay ? "replay" : "live"
+  puts "Starting demo in #{label} mode..."
 
   pid = spawn(
-    { "LLM_MODE" => mode, "SCENARIO_PATH" => scenario.to_s },
-    "ruby", "bin/demo",
+    { "LLM_MODE" => mode, "SCENARIO_PATH" => ENV["SCENARIO_PATH"].to_s },
+    *args,
     out: "log/demo.log",
     err: "log/demo.log"
   )
@@ -107,6 +112,7 @@ task :start do
   File.write(PIDFILE, pid.to_s)
   Process.detach(pid)
   puts "Demo started (pid #{pid}), logging to log/demo.log"
+  puts "Dashboard: http://localhost:4567"
 end
 
 desc "Stop the running demo"

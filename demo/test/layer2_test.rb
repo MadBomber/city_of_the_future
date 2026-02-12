@@ -101,7 +101,7 @@ class Layer2Test < Minitest::Test
 
       sleep 0.05
 
-      assert_equal '{"error":"no recorded response"}', received.content
+      assert_match(/department/, received.content)
       assert_equal 0, received.tokens
       assert_equal "req-missing", received.correlation_id
     end

@@ -80,7 +80,7 @@ class IntegrationTest < Minitest::Test
     end
 
     assert response, "Should still produce a response for unknown IDs"
-    assert_match(/error/, response.content)
+    assert_match(/department/, response.content)
   end
 
   # ==========================================

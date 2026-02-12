@@ -58,32 +58,32 @@
         <div class="dept-row" data-dept="Fire">
           <span class="dept-dot" style="background:#ff4444"></span>
           <span class="dept-name">Fire</span>
-          <div class="dept-bar"><div class="dept-fill" style="width:100%;background:#ff4444"></div></div>
-          <span class="dept-units">5/5</span>
+          <div class="dept-bar"><div class="dept-fill" style="width:0%;background:#ff4444"></div></div>
+          <span class="dept-units">0/5</span>
         </div>
         <div class="dept-row" data-dept="Police">
           <span class="dept-dot" style="background:#4488ff"></span>
           <span class="dept-name">Police</span>
-          <div class="dept-bar"><div class="dept-fill" style="width:100%;background:#4488ff"></div></div>
-          <span class="dept-units">4/4</span>
+          <div class="dept-bar"><div class="dept-fill" style="width:0%;background:#4488ff"></div></div>
+          <span class="dept-units">0/4</span>
         </div>
         <div class="dept-row" data-dept="EMS">
           <span class="dept-dot" style="background:#44bb44"></span>
           <span class="dept-name">EMS</span>
-          <div class="dept-bar"><div class="dept-fill" style="width:100%;background:#44bb44"></div></div>
-          <span class="dept-units">3/3</span>
+          <div class="dept-bar"><div class="dept-fill" style="width:0%;background:#44bb44"></div></div>
+          <span class="dept-units">0/3</span>
         </div>
         <div class="dept-row" data-dept="Utilities">
           <span class="dept-dot" style="background:#ffaa44"></span>
           <span class="dept-name">Utilities</span>
-          <div class="dept-bar"><div class="dept-fill" style="width:100%;background:#ffaa44"></div></div>
-          <span class="dept-units">2/2</span>
+          <div class="dept-bar"><div class="dept-fill" style="width:0%;background:#ffaa44"></div></div>
+          <span class="dept-units">0/2</span>
         </div>
         <div class="dept-row" data-dept="CityCouncil">
           <span class="dept-dot" style="background:#ffffff"></span>
           <span class="dept-name">Council</span>
-          <div class="dept-bar"><div class="dept-fill" style="width:100%;background:#ffffff"></div></div>
-          <span class="dept-units">1/1</span>
+          <div class="dept-bar"><div class="dept-fill" style="width:0%;background:#ffffff"></div></div>
+          <span class="dept-units">0/1</span>
         </div>
       </div>
       <div id="governance-stats">
@@ -97,6 +97,14 @@
       <h2>Event Stream</h2>
       <div id="event-stream"></div>
     </div>
+  </div>
+
+  <div id="quick-calls">
+    <button class="quick-call" data-caller="Maria Santos" data-location="4th and Main Street" data-description="There's smoke pouring out of the building! The whole second floor is on fire!" data-severity="high">Fire</button>
+    <button class="quick-call" data-caller="James Wilson" data-location="Oak Street and 12th Avenue" data-description="Someone just robbed the corner store! They had a gun and ran east on Oak!" data-severity="critical">Police</button>
+    <button class="quick-call" data-caller="Lisa Chen" data-location="200 Elm Street" data-description="My husband is having chest pains! He's sweating and can't breathe!" data-severity="critical">EMS</button>
+    <button class="quick-call" data-caller="Tom Bradley" data-location="Industrial Boulevard" data-description="There's water shooting up from the street! A pipe must have burst!" data-severity="medium">Utilities</button>
+    <button class="quick-call" data-caller="Derek Nguyen" data-location="Downtown, Central Square" data-description="There are drones everywhere downtown! Hundreds of them dropping papers!" data-severity="high">Unknown</button>
   </div>
 
   <footer id="bus-stats">

@@ -1,0 +1,53 @@
+# Pre-recorded code generation responses for replay mode.
+# Used by ReplayRobot to simulate robot_lab code generation
+# without a live LLM.
+
+- patterns:
+    - "escalation"
+    - "insufficient units"
+    - "coordinate"
+  response: |
+    ```ruby
+    def coordinate_drone_response(call_id: nil, **context)
+      {
+        status: :coordinated,
+        plan: "Multi-agency drone response activated",
+        steps: [
+          "Alert FAA regional office",
+          "Deploy police perimeter around affected area",
+          "Request fire department standby for public safety",
+          "Activate emergency broadcast for downtown area"
+        ],
+        units_assigned: 1,
+        notes: "Novel threat coordinated by CityCouncil emergency protocol"
+      }
+    end
+    ```
+
+- patterns:
+    - "method_missing"
+    - "missing"
+    - "handle_"
+  response: |
+    ```ruby
+    def handle_novel_emergency(*args)
+      {
+        status: :acknowledged,
+        notes: "Novel emergency type acknowledged, routing to coordination",
+        priority: 2
+      }
+    end
+    ```
+
+- default: true
+  patterns: []
+  response: |
+    ```ruby
+    def handle_unknown_situation(*args)
+      {
+        status: :acknowledged,
+        notes: "Situation acknowledged and logged for review",
+        priority: 3
+      }
+    end
+    ```

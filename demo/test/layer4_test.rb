@@ -440,12 +440,12 @@ class Layer4Test < Minitest::Test
     robot = build_fake_robot("```ruby\n#{source}\n```")
 
     test_class = Class.new
-    Object.const_set(:CityCouncil, test_class) unless defined?(CityCouncil)
+    Object.const_set(:L4TestCouncil, test_class) unless defined?(L4TestCouncil)
 
-    gov = Governance.new(allowlist: ["CityCouncil"])
+    gov = Governance.new(allowlist: ["L4TestCouncil"])
     gov.attach(@bus)
 
-    agency = SelfAgencyBridge.new(robot: robot, target_class: "CityCouncil")
+    agency = SelfAgencyBridge.new(robot: robot, target_class: "L4TestCouncil")
     agency.attach(@bus)
 
     installed = false
@@ -471,9 +471,9 @@ class Layer4Test < Minitest::Test
     end
 
     assert installed, "Method should be installed after escalation → agency → governance flow"
-    result = CityCouncil.new.coordinate_meteor_strike
+    result = L4TestCouncil.new.coordinate_meteor_strike
     assert_equal({ plan: "evacuate" }, result)
   ensure
-    Object.send(:remove_const, :CityCouncil) if defined?(CityCouncil)
+    Object.send(:remove_const, :L4TestCouncil) if defined?(L4TestCouncil)
   end
 end

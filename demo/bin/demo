@@ -41,6 +41,27 @@ speaker = Speaker.new(logger: $logger, enabled: ENV["VOICE"] != "off")
 speaker.attach(bus)
 $logger.info "Speaker attached (enabled: #{ENV["VOICE"] != "off"})"
 
+# --- VSM Capsule (Layer 5) ---
+
+require_relative "../lib/departments"
+require_relative "../lib/vsm/intelligence"
+require_relative "../lib/vsm/operations"
+
+fire    = FireDepartment.new
+police  = PoliceDepartment.new
+ems     = EMS.new
+utils   = Utilities.new
+council = CityCouncil.new
+
+intelligence = Intelligence.new(logger: $logger)
+intelligence.attach(bus)
+$logger.info "Intelligence attached"
+
+operations = Operations.new(logger: $logger)
+[fire, police, ems, utils, council].each { |dept| operations.register(dept) }
+operations.attach(bus)
+$logger.info "Operations attached with #{[fire, police, ems, utils, council].size} departments"
+
 # --- Autonomy (Layer 4) ---
 
 require_relative "../lib/autonomy/governance"
@@ -61,8 +82,12 @@ code_gen_robot = RobotLab.build(
 
 chaos = ChaosBridge.new(robot: code_gen_robot, logger: $logger)
 chaos.attach(bus)
-# chaos.watch(FireDepartment) # Layer 5 will add department classes
-$logger.info "ChaosBridge attached"
+chaos.watch(FireDepartment)
+chaos.watch(PoliceDepartment)
+chaos.watch(EMS)
+chaos.watch(Utilities)
+chaos.watch(CityCouncil)
+$logger.info "ChaosBridge attached (watching 5 department classes)"
 
 agency = SelfAgencyBridge.new(robot: code_gen_robot, logger: $logger)
 agency.attach(bus)

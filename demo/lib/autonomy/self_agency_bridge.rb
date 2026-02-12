@@ -17,6 +17,9 @@ class SelfAgencyBridge
     bus.subscribe(:escalation) do |delivery|
       handle_escalation(delivery.message)
       delivery.ack!
+    rescue => e
+      @logger&.error "SelfAgencyBridge: unhandled error — #{e.class}: #{e.message}"
+      delivery.ack!
     end
   end
 
@@ -93,8 +96,8 @@ class SelfAgencyBridge
     retry_with_new_capability(esc, actual_name.to_s)
 
     generate_department_capabilities(esc)
-  rescue SelfAgency::Error => e
-    @logger&.info "SelfAgencyBridge: self_agency failed — #{e.message}"
+  rescue => e
+    @logger&.info "SelfAgencyBridge: self_agency failed — #{e.class}: #{e.message}"
     @bus.publish(:display, DisplayEvent.new(
       type:      :method_gen_failed,
       data:      { class: @target_class, method: "unknown", reason: e.message },
@@ -190,8 +193,8 @@ class SelfAgencyBridge
 
       instance = klass.new
       instance._(description)
-    rescue SelfAgency::Error => e
-      @logger&.info "SelfAgencyBridge: department capability gen failed for #{class_name} — #{e.message}"
+    rescue => e
+      @logger&.info "SelfAgencyBridge: department capability gen failed for #{class_name} — #{e.class}: #{e.message}"
     end
   end
 end

@@ -66,7 +66,8 @@ class Intelligence
   end
 
   def parse_classification(content)
-    data = JSON.parse(content, symbolize_names: true)
+    json_str = extract_json(content)
+    data = JSON.parse(json_str, symbolize_names: true)
     {
       department:      data[:department]&.to_s || "unknown",
       priority:        data[:priority]&.to_i || 3,
@@ -76,5 +77,14 @@ class Intelligence
   rescue JSON::ParserError
     @logger&.info "Intelligence: JSON parse failed, defaulting to unknown"
     { department: "unknown", priority: 3, units_requested: 1, eta: "unknown" }
+  end
+
+  def extract_json(content)
+    # Strip markdown code fences if present
+    if content =~ /```(?:json)?\s*\n?(.*?)\n?\s*```/m
+      $1.strip
+    else
+      content
+    end
   end
 end

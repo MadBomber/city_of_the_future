@@ -1,7 +1,7 @@
 require "ruby_llm"
 
 class LiveHandler
-  DEFAULT_MODEL = "claude-sonnet-4-5-20250929"
+  DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 
   def initialize(logger: nil)
     @logger = logger

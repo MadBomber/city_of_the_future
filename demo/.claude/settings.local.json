@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/Users/dewayne/.claude/plugins/cache/ruby-skills/ruby-skills/0.5.0/skills/ruby-version-manager/detect.sh)",
+      "Bash(ruby -e:*)",
+      "Bash(ruby:*)",
+      "Bash(bundle exec rake:*)",
+      "Bash(bundle exec ruby:*)"
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+source "https://rubygems.org"
+
+ruby ">= 3.2.0"
+
+gem "typed_bus"
+gem "self_agency"
+gem "robot_lab"
+gem "chaos_to_the_rescue"
+
+gem "lumberjack"
+gem "minitest"
+# gem "ruby_llm"
+gem "debug_me"
+# gem "amazing_print"

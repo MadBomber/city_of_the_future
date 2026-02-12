@@ -16,6 +16,12 @@ end.parse!
 require_relative "../lib/bus_setup"
 require_relative "../lib/llm_mode"
 
+# --- RubyLLM configuration ---
+
+RubyLLM.configure do |c|
+  c.anthropic_api_key = ENV["ANTHROPIC_API_KEY"]
+end
+
 # --- Logger ---
 
 FileUtils.mkdir_p("log")
@@ -82,19 +88,27 @@ governance = Governance.new(logger: $logger)
 governance.attach(bus)
 $logger.info "Governance attached"
 
-# Code generation robot — always use ReplayRobot so the autonomy
-# demo is reliable regardless of LLM availability
-require_relative "../lib/llm/replay_robot"
-robot_path = File.expand_path("../scenarios/demo_robot.yml", __dir__)
-code_gen_robot = ReplayRobot.new(robot_path, logger: $logger)
-$logger.info "Using ReplayRobot for code generation"
+# Code generation robot — uses RobotLab for live LLM code generation
+require "robot_lab"
 
-# Configure SelfAgency for replay mode
+code_gen_robot = RobotLab.build(
+  name:     "code_generator",
+  template: :code_generator,
+  model:    "claude-haiku-4-5-20251001"
+)
+$logger.info "Using RobotLab robot for code generation (model: claude-haiku-4-5-20251001)"
+
+# Configure SelfAgency
 SelfAgency.configure do |config|
-  config.provider = :ollama
-  config.model    = "replay"
-  config.api_base = "http://localhost:0"
+  config.provider = :anthropic
+  config.model    = "claude-haiku-4-5-20251001"
   config.logger   = ->(stage, msg) { $logger.info "[SelfAgency:#{stage}] #{msg}" }
+end
+
+# SelfAgency.configure overrides RubyLLM::Template directory with its own
+# gem prompts path. Restore it so RobotLab can find the code_generator template.
+RubyLLM::Template.configure do |config|
+  config.template_directory = File.expand_path("../prompts", __dir__)
 end
 
 # Wire department classes to robot and bus

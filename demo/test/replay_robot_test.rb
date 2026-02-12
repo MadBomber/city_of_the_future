@@ -27,18 +27,101 @@ class ReplayRobotTest < Minitest::Test
   end
 
   # ==========================================
-  # Pattern matching
+  # Department pattern matching
   # ==========================================
 
-  def test_matches_escalation_pattern
-    result = @robot.run(message: "An emergency escalation occurred for call C-009")
+  def test_matches_fire_department_pattern
+    result = @robot.run(message: "Generate a Ruby method for class `FireDepartment`.")
+    assert_match(/emergency_safety_standby/, result.last_text_content)
+  end
+
+  def test_matches_police_department_pattern
+    result = @robot.run(message: "Generate a Ruby method for class `PoliceDepartment`.")
+    assert_match(/emergency_perimeter_control/, result.last_text_content)
+  end
+
+  def test_matches_ems_pattern
+    result = @robot.run(message: "Generate a Ruby method for class `EMS`.")
+    assert_match(/emergency_medical_standby/, result.last_text_content)
+  end
+
+  def test_matches_utilities_pattern
+    result = @robot.run(message: "Generate a Ruby method for class `Utilities`.")
+    assert_match(/emergency_grid_protection/, result.last_text_content)
+  end
+
+  def test_department_responses_pass_code_extractor
+    prompts = {
+      "FireDepartment"    => /emergency_safety_standby/,
+      "PoliceDepartment"  => /emergency_perimeter_control/,
+      "class `EMS`"       => /emergency_medical_standby/,
+      "class `Utilities`" => /emergency_grid_protection/
+    }
+    prompts.each do |keyword, method_pattern|
+      result = @robot.run(message: "Generate method for #{keyword}")
+      source = CodeExtractor.extract(result.last_text_content)
+      assert source, "CodeExtractor should extract from #{keyword} response"
+      assert_match(method_pattern, source)
+    end
+  end
+
+  # ==========================================
+  # Scenario-specific coordinator matching
+  # ==========================================
+
+  def test_matches_drone_scenario
+    result = @robot.run(message: "Call: drones everywhere downtown dropping papers")
     assert_match(/coordinate_drone_response/, result.last_text_content)
   end
 
-  def test_matches_insufficient_units_pattern
-    result = @robot.run(message: "Reason: insufficient units (0/1)")
-    assert_match(/coordinate_drone_response/, result.last_text_content)
+  def test_matches_portal_scenario
+    result = @robot.run(message: "Call: portal opened at the park, armored figures marching through")
+    assert_match(/coordinate_interdimensional_breach/, result.last_text_content)
   end
+
+  def test_matches_sinkhole_scenario
+    result = @robot.run(message: "Call: massive sinkhole opened up on Elm Street")
+    assert_match(/coordinate_sinkhole_response/, result.last_text_content)
+  end
+
+  def test_matches_fog_scenario
+    result = @robot.run(message: "Call: Strange glowing fog, people confused, can't remember")
+    assert_match(/coordinate_anomalous_fog_response/, result.last_text_content)
+  end
+
+  def test_matches_swarm_scenario
+    result = @robot.run(message: "Call: swarm of metallic things landing on buildings")
+    assert_match(/coordinate_aerial_swarm_response/, result.last_text_content)
+  end
+
+  def test_matches_creature_scenario
+    result = @robot.run(message: "Call: Giant creatures coming out of the river, centipede-like")
+    assert_match(/coordinate_creature_emergence_response/, result.last_text_content)
+  end
+
+  def test_matches_emp_scenario
+    result = @robot.run(message: "Call: Every car stopped working, electronics are dead, jamming")
+    assert_match(/coordinate_emp_event_response/, result.last_text_content)
+  end
+
+  def test_matches_energy_field_scenario
+    result = @robot.run(message: "Call: beam of light hit the clock tower, force field expanding")
+    assert_match(/coordinate_energy_field_response/, result.last_text_content)
+  end
+
+  def test_matches_crashed_craft_scenario
+    result = @robot.run(message: "Call: Something crashed, glowing craft, figures emerging")
+    assert_match(/coordinate_unidentified_craft_response/, result.last_text_content)
+  end
+
+  def test_generic_escalation_fallback
+    result = @robot.run(message: "An emergency escalation occurred, No department available")
+    assert_match(/coordinate_emergency_response/, result.last_text_content)
+  end
+
+  # ==========================================
+  # ChaosBridge and default
+  # ==========================================
 
   def test_matches_method_missing_pattern
     result = @robot.run(message: "Generate a Ruby instance method named `handle_drone_swarm` — method_missing")
@@ -51,7 +134,7 @@ class ReplayRobotTest < Minitest::Test
   end
 
   def test_pattern_matching_is_case_insensitive
-    result = @robot.run(message: "ESCALATION occurred!")
+    result = @robot.run(message: "DRONE swarm overhead!")
     assert_match(/coordinate_drone_response/, result.last_text_content)
   end
 
@@ -60,7 +143,7 @@ class ReplayRobotTest < Minitest::Test
   # ==========================================
 
   def test_escalation_response_passes_code_extractor
-    result = @robot.run(message: "escalation for call C-009")
+    result = @robot.run(message: "drone swarm escalation for call C-009")
     source = CodeExtractor.extract(result.last_text_content)
     assert source, "CodeExtractor should extract a method from the escalation response"
     assert_match(/\Adef\s+coordinate_drone_response/, source)
@@ -85,15 +168,15 @@ class ReplayRobotTest < Minitest::Test
   # Integration: SelfAgencyBridge prompt format
   # ==========================================
 
-  def test_matches_self_agency_bridge_prompt
-    # This is the actual prompt format from SelfAgencyBridge#handle_escalation
+  def test_matches_self_agency_bridge_prompt_with_description
+    # Actual prompt format — now includes the call description
     prompt = <<~PROMPT
-      Generate a Ruby method `coordinate_drone_response` for class `CityCouncil`.
+      Generate a Ruby method `coordinate_no_department_available_for_u` for class `CityCouncil`.
 
       An emergency escalation occurred:
-      - Call: #<data EmergencyCall call_id="C-009">
-      - Reason: insufficient units (0/1)
-      - Tried departments: CityCouncil
+      - Call: Something crashed in the financial district! It's not a plane, it's some kind of craft and it's still glowing!
+      - Reason: No department available for 'unknown'
+      - Tried departments:
 
       The method should coordinate a multi-department response.
       Return ONLY a def...end block. No class wrapper.
@@ -104,7 +187,7 @@ class ReplayRobotTest < Minitest::Test
     result = @robot.run(message: prompt)
     source = CodeExtractor.extract(result.last_text_content)
     assert source, "Should produce extractable code from SelfAgencyBridge prompt"
-    assert_match(/\Adef\s+/, source)
+    assert_match(/coordinate_unidentified_craft_response/, source)
   end
 
   # ==========================================
@@ -115,7 +198,7 @@ class ReplayRobotTest < Minitest::Test
     responses = YAML.load_file(RESPONSES_PATH, permitted_classes: [Symbol])
 
     assert_kind_of Array, responses
-    assert responses.size >= 2, "Should have at least 2 response entries"
+    assert responses.size >= 15, "Should have at least 15 response entries (4 dept + 9 coordinator scenarios + fallback + missing + default)"
 
     responses.each do |entry|
       assert entry.key?("response"), "Each entry must have a 'response'"

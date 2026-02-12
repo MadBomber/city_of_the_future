@@ -1,41 +1,101 @@
 # Pre-recorded code generation responses for replay mode.
 # Used by ReplayRobot to simulate robot_lab code generation
 # without a live LLM.
+#
+# Order matters — ReplayRobot returns the first match.
+# Department-specific entries must come before coordinator entries.
+# Scenario-specific coordinator entries must come before the
+# generic coordinator fallback.
+
+# ===========================================
+# Department-specific capabilities
+# ===========================================
+# These match on the class name in the prompt from
+# generate_department_capabilities, so they work for
+# any scenario.
 
 - patterns:
-    - "escalation"
-    - "insufficient units"
-    - "coordinate"
-    - "No department available"
+    - "FireDepartment"
   response: |
     ```ruby
-    def coordinate_drone_response(call_id: nil, **context)
+    def emergency_safety_standby(call_id: nil, **context)
       {
-        status: :coordinated,
-        plan: "Multi-agency drone response activated",
-        departments: [
-          { department: "Fire",      units_requested: 1, role: "Public safety standby" },
-          { department: "Police",    units_requested: 1, role: "Perimeter and crowd control" },
-          { department: "EMS",       units_requested: 1, role: "Medical standby for injuries" },
-          { department: "Utilities", units_requested: 1, role: "Power grid protection" }
+        status: :deployed,
+        plan: "Fire units positioned for public safety",
+        actions: [
+          "Deploy hazmat-rated units to staging area",
+          "Prepare aerial ladder for elevated rescue",
+          "Station rescue squad for civilian extraction"
         ],
-        steps: [
-          "Alert FAA regional office",
-          "Deploy police perimeter around affected area",
-          "Request fire department standby for public safety",
-          "Station EMS units for potential injuries",
-          "Utilities to secure power grid from drone interference",
-          "Activate emergency broadcast for downtown area"
-        ],
-        notes: "Novel threat coordinated by CityCouncil emergency protocol"
+        notes: "Fire department emergency protocol active"
       }
     end
     ```
 
 - patterns:
+    - "PoliceDepartment"
+  response: |
+    ```ruby
+    def emergency_perimeter_control(call_id: nil, **context)
+      {
+        status: :deployed,
+        plan: "Police perimeter established around affected zone",
+        actions: [
+          "Establish 3-block perimeter around affected area",
+          "Deploy crowd control units",
+          "Coordinate with federal agencies as needed"
+        ],
+        notes: "Police emergency perimeter protocol active"
+      }
+    end
+    ```
+
+- patterns:
+    - "class `EMS`"
+  response: |
+    ```ruby
+    def emergency_medical_standby(call_id: nil, **context)
+      {
+        status: :deployed,
+        plan: "EMS units on medical standby for injuries",
+        actions: [
+          "Stage ambulance at perimeter edge",
+          "Prepare triage area for potential casualties",
+          "Alert trauma center for possible incoming"
+        ],
+        notes: "EMS emergency medical standby protocol active"
+      }
+    end
+    ```
+
+- patterns:
+    - "class `Utilities`"
+  response: |
+    ```ruby
+    def emergency_grid_protection(call_id: nil, **context)
+      {
+        status: :deployed,
+        plan: "Utilities securing critical infrastructure",
+        actions: [
+          "Activate backup power for essential services",
+          "Monitor power grid for interference",
+          "Secure water treatment facility"
+        ],
+        notes: "Utilities emergency grid protection protocol active"
+      }
+    end
+    ```
+
+# ===========================================
+# ChaosBridge fallbacks
+# ===========================================
+# Must come before scenario-specific coordinators
+# because method_missing prompts may contain scenario
+# keywords like "drone" in the method name.
+
+- patterns:
     - "method_missing"
     - "missing"
-    - "handle_"
   response: |
     ```ruby
     def handle_novel_emergency(*args)
@@ -43,6 +103,307 @@
         status: :acknowledged,
         notes: "Novel emergency type acknowledged, routing to coordination",
         priority: 2
+      }
+    end
+    ```
+
+# ===========================================
+# Scenario-specific coordinators (CityCouncil)
+# ===========================================
+# These match on keywords from the call description
+# that now flows through to the escalation prompt.
+# Each unknown scenario gets a tailored response.
+
+- patterns:
+    - "drone"
+    - "dropping papers"
+  response: |
+    ```ruby
+    def coordinate_drone_response(call_id: nil, **context)
+      {
+        status: :coordinated,
+        plan: "Multi-agency drone swarm response activated",
+        departments: [
+          { department: "Fire",      units_requested: 1, role: "Public safety standby" },
+          { department: "Police",    units_requested: 1, role: "Perimeter and crowd control" },
+          { department: "EMS",       units_requested: 1, role: "Medical standby for injuries" },
+          { department: "Utilities", units_requested: 1, role: "Power grid protection" }
+        ],
+        steps: [
+          "Alert FAA regional office for airspace restriction",
+          "Deploy police perimeter around drone activity zone",
+          "Request fire department hazmat standby",
+          "Station EMS units for potential injuries",
+          "Utilities to secure power grid from electromagnetic interference",
+          "Activate emergency broadcast for affected area"
+        ],
+        notes: "Drone threat coordinated by CityCouncil emergency protocol"
+      }
+    end
+    ```
+
+- patterns:
+    - "portal"
+    - "hole in the air"
+    - "wormhole"
+    - "marching through"
+  response: |
+    ```ruby
+    def coordinate_interdimensional_breach(call_id: nil, **context)
+      {
+        status: :coordinated,
+        plan: "Interdimensional breach containment protocol activated",
+        departments: [
+          { department: "Fire",      units_requested: 1, role: "Hazmat containment of breach zone" },
+          { department: "Police",    units_requested: 1, role: "Civilian evacuation and perimeter" },
+          { department: "EMS",       units_requested: 1, role: "Mass casualty triage preparation" },
+          { department: "Utilities", units_requested: 1, role: "Electromagnetic shielding of infrastructure" }
+        ],
+        steps: [
+          "Establish 5-block exclusion zone around breach point",
+          "Evacuate all civilians from affected area",
+          "Request National Guard activation",
+          "Deploy radiation and energy monitoring equipment",
+          "Activate city-wide emergency broadcast system",
+          "Establish unified command post at safe distance"
+        ],
+        notes: "Interdimensional breach — coordinated by CityCouncil crisis protocol"
+      }
+    end
+    ```
+
+- patterns:
+    - "sinkhole"
+    - "ground is shaking"
+  response: |
+    ```ruby
+    def coordinate_sinkhole_response(call_id: nil, **context)
+      {
+        status: :coordinated,
+        plan: "Catastrophic sinkhole response activated",
+        departments: [
+          { department: "Fire",      units_requested: 1, role: "Urban search and rescue" },
+          { department: "Police",    units_requested: 1, role: "Traffic diversion and perimeter" },
+          { department: "EMS",       units_requested: 1, role: "Trauma response for trapped victims" },
+          { department: "Utilities", units_requested: 1, role: "Gas line shutoff and structural assessment" }
+        ],
+        steps: [
+          "Evacuate all structures within 2-block radius",
+          "Deploy ground-penetrating radar to map collapse extent",
+          "Shut off all gas mains in affected area",
+          "Deploy heavy rescue equipment for vehicle extraction",
+          "Request geotechnical engineers for stability assessment",
+          "Activate mutual aid agreements with neighboring jurisdictions"
+        ],
+        notes: "Major sinkhole event — coordinated by CityCouncil emergency protocol"
+      }
+    end
+    ```
+
+- patterns:
+    - "fog"
+    - "confused"
+    - "remember"
+  response: |
+    ```ruby
+    def coordinate_anomalous_fog_response(call_id: nil, **context)
+      {
+        status: :coordinated,
+        plan: "Anomalous atmospheric event containment activated",
+        departments: [
+          { department: "Fire",      units_requested: 1, role: "Hazmat team for atmospheric sampling" },
+          { department: "Police",    units_requested: 1, role: "Evacuation enforcement and road closures" },
+          { department: "EMS",       units_requested: 1, role: "Neurological triage for affected persons" },
+          { department: "Utilities", units_requested: 1, role: "Air quality monitoring and ventilation" }
+        ],
+        steps: [
+          "Establish fog boundary with atmospheric sensors",
+          "Evacuate downwind residential areas immediately",
+          "Deploy hazmat team with full respiratory protection",
+          "Set up decontamination corridor for affected persons",
+          "Request CDC rapid response for cognitive impairment cases",
+          "Activate shelter-in-place orders for surrounding blocks"
+        ],
+        notes: "Anomalous fog with neurological effects — coordinated by CityCouncil hazmat protocol"
+      }
+    end
+    ```
+
+- patterns:
+    - "swarm"
+    - "metallic"
+    - "landing on buildings"
+  response: |
+    ```ruby
+    def coordinate_aerial_swarm_response(call_id: nil, **context)
+      {
+        status: :coordinated,
+        plan: "Unidentified aerial swarm response activated",
+        departments: [
+          { department: "Fire",      units_requested: 1, role: "Structural assessment of landing sites" },
+          { department: "Police",    units_requested: 1, role: "Rooftop security and no-fly enforcement" },
+          { department: "EMS",       units_requested: 1, role: "Standby for impact injuries" },
+          { department: "Utilities", units_requested: 1, role: "Protect rooftop infrastructure and antennas" }
+        ],
+        steps: [
+          "Alert military air defense for identification",
+          "Evacuate top floors of buildings with landing activity",
+          "Deploy counter-drone electronic warfare if available",
+          "Establish ground observation posts for tracking",
+          "Activate emergency broadcast warning residents to stay indoors",
+          "Request federal aviation authority immediate airspace closure"
+        ],
+        notes: "Metallic aerial swarm — coordinated by CityCouncil defense protocol"
+      }
+    end
+    ```
+
+- patterns:
+    - "creatures"
+    - "centipede"
+    - "river"
+  response: |
+    ```ruby
+    def coordinate_creature_emergence_response(call_id: nil, **context)
+      {
+        status: :coordinated,
+        plan: "Large-scale creature emergence response activated",
+        departments: [
+          { department: "Fire",      units_requested: 1, role: "Heavy equipment for barrier deployment" },
+          { department: "Police",    units_requested: 1, role: "Armed response and civilian evacuation" },
+          { department: "EMS",       units_requested: 1, role: "Mass casualty preparation" },
+          { department: "Utilities", units_requested: 1, role: "Bridge and tunnel emergency closures" }
+        ],
+        steps: [
+          "Issue city-wide evacuation order for riverfront district",
+          "Request National Guard heavy weapons support",
+          "Deploy fire apparatus as mobile barriers",
+          "Establish multiple triage points along evacuation routes",
+          "Close all bridges and tunnels near emergence point",
+          "Activate mutual aid with state emergency management"
+        ],
+        notes: "Unknown creature emergence — coordinated by CityCouncil crisis protocol"
+      }
+    end
+    ```
+
+- patterns:
+    - "electronics are dead"
+    - "jamming"
+    - "stopped working"
+  response: |
+    ```ruby
+    def coordinate_emp_event_response(call_id: nil, **context)
+      {
+        status: :coordinated,
+        plan: "Electromagnetic pulse event response activated",
+        departments: [
+          { department: "Fire",      units_requested: 1, role: "Manual firefighting standby — electronics down" },
+          { department: "Police",    units_requested: 1, role: "Traffic control without signals" },
+          { department: "EMS",       units_requested: 1, role: "Manual dispatch for medical emergencies" },
+          { department: "Utilities", units_requested: 1, role: "Grid isolation and Faraday protection" }
+        ],
+        steps: [
+          "Switch all departments to analog radio communication",
+          "Deploy officers to major intersections for manual traffic control",
+          "Activate backup generators at hospitals and shelters",
+          "Isolate affected power grid sections to prevent cascade",
+          "Request military electronic warfare assessment team",
+          "Establish analog command post with runner communication"
+        ],
+        notes: "Electromagnetic disruption event — coordinated by CityCouncil continuity protocol"
+      }
+    end
+    ```
+
+- patterns:
+    - "force field"
+    - "beam of light"
+    - "pushing everything"
+  response: |
+    ```ruby
+    def coordinate_energy_field_response(call_id: nil, **context)
+      {
+        status: :coordinated,
+        plan: "Expanding energy field containment response activated",
+        departments: [
+          { department: "Fire",      units_requested: 1, role: "Structural collapse rescue at field boundary" },
+          { department: "Police",    units_requested: 1, role: "Expanding evacuation zone management" },
+          { department: "EMS",       units_requested: 1, role: "Blast injury and radiation exposure triage" },
+          { department: "Utilities", units_requested: 1, role: "Emergency shutdown of gas and electric in field path" }
+        ],
+        steps: [
+          "Track expansion rate and establish safe evacuation distance",
+          "Evacuate all persons ahead of field boundary",
+          "Deploy radiation monitoring at field perimeter",
+          "Emergency shutdown of all utilities in projected field path",
+          "Request Department of Energy rapid response team",
+          "Establish observation posts to monitor field behavior"
+        ],
+        notes: "Expanding energy phenomenon — coordinated by CityCouncil emergency protocol"
+      }
+    end
+    ```
+
+- patterns:
+    - "crashed"
+    - "craft"
+    - "glowing"
+    - "emerging"
+  response: |
+    ```ruby
+    def coordinate_unidentified_craft_response(call_id: nil, **context)
+      {
+        status: :coordinated,
+        plan: "Unidentified craft crash response activated",
+        departments: [
+          { department: "Fire",      units_requested: 1, role: "Hazmat containment of crash site" },
+          { department: "Police",    units_requested: 1, role: "Secure crash site and establish contact protocol" },
+          { department: "EMS",       units_requested: 1, role: "Standby for unknown biological exposure" },
+          { department: "Utilities", units_requested: 1, role: "Radiation monitoring and grid protection" }
+        ],
+        steps: [
+          "Establish 4-block exclusion zone around crash site",
+          "Deploy hazmat team with full biological and radiation protection",
+          "Request military rapid response for first contact protocol",
+          "Evacuate all civilians from exclusion zone",
+          "Set up decontamination stations at zone perimeter",
+          "Activate emergency broadcast: shelter in place for surrounding area"
+        ],
+        notes: "Unidentified craft impact — coordinated by CityCouncil first contact protocol"
+      }
+    end
+    ```
+
+# ===========================================
+# Generic coordinator fallback
+# ===========================================
+# Catches any escalation that doesn't match a
+# specific scenario above.
+
+- patterns:
+    - "escalation"
+    - "coordinate"
+    - "No department available"
+  response: |
+    ```ruby
+    def coordinate_emergency_response(call_id: nil, **context)
+      {
+        status: :coordinated,
+        plan: "Multi-agency emergency response activated",
+        departments: [
+          { department: "Fire",      units_requested: 1, role: "Public safety standby" },
+          { department: "Police",    units_requested: 1, role: "Perimeter and crowd control" },
+          { department: "EMS",       units_requested: 1, role: "Medical standby for injuries" },
+          { department: "Utilities", units_requested: 1, role: "Infrastructure protection" }
+        ],
+        steps: [
+          "Assess scope of emergency and establish command post",
+          "Deploy perimeter around affected area",
+          "Station emergency units for rapid response",
+          "Activate emergency broadcast for affected area"
+        ],
+        notes: "Novel threat coordinated by CityCouncil emergency protocol"
       }
     end
     ```

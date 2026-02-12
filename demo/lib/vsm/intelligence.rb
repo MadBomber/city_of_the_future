@@ -60,7 +60,8 @@ class Intelligence
       department:      classification[:department],
       units_requested: classification[:units_requested],
       priority:        classification[:priority],
-      eta:             classification[:eta]
+      eta:             classification[:eta],
+      description:     call.description
     ))
   end
 

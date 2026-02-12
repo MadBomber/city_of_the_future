@@ -91,6 +91,7 @@
         <div>Methods approved: <span id="approved-count">0</span></div>
         <div>Methods rejected: <span id="rejected-count">0</span></div>
       </div>
+      <div id="generated-code"></div>
     </div>
 
     <div id="events-panel" class="panel">
@@ -100,11 +101,11 @@
   </div>
 
   <div id="quick-calls">
-    <button class="quick-call" data-caller="Maria Santos" data-location="4th and Main Street" data-description="There's smoke pouring out of the building! The whole second floor is on fire!" data-severity="high">Fire</button>
-    <button class="quick-call" data-caller="James Wilson" data-location="Oak Street and 12th Avenue" data-description="Someone just robbed the corner store! They had a gun and ran east on Oak!" data-severity="critical">Police</button>
-    <button class="quick-call" data-caller="Lisa Chen" data-location="200 Elm Street" data-description="My husband is having chest pains! He's sweating and can't breathe!" data-severity="critical">EMS</button>
-    <button class="quick-call" data-caller="Tom Bradley" data-location="Industrial Boulevard" data-description="There's water shooting up from the street! A pipe must have burst!" data-severity="medium">Utilities</button>
-    <button class="quick-call" data-caller="Derek Nguyen" data-location="Downtown, Central Square" data-description="There are drones everywhere downtown! Hundreds of them dropping papers!" data-severity="high">Unknown</button>
+    <button class="quick-call" data-type="fire">Fire</button>
+    <button class="quick-call" data-type="police">Police</button>
+    <button class="quick-call" data-type="ems">EMS</button>
+    <button class="quick-call" data-type="utilities">Utilities</button>
+    <button class="quick-call" data-type="unknown">Unknown</button>
   </div>
 
   <footer id="bus-stats">

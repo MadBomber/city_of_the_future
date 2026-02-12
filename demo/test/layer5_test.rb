@@ -289,6 +289,58 @@ class Layer5Test < Minitest::Test
     assert_match(/No department available/, escalation.reason)
   end
 
+  def test_operations_budget_request_for_insufficient_units
+    fire = FireDepartment.new
+    ops  = Operations.new
+    ops.register(fire)
+    ops.attach(@bus)
+
+    escalation = nil
+    @bus.subscribe(:escalation) do |delivery|
+      escalation = delivery.message
+      delivery.ack!
+    end
+
+    display_events = []
+    @bus.subscribe(:display) do |delivery|
+      display_events << delivery.message
+      delivery.ack!
+    end
+
+    @bus.subscribe(:voice_out)      { |d| d.ack! }
+    @bus.subscribe(:field_reports)   { |d| d.ack! }
+    @bus.subscribe(:department_status) { |d| d.ack! }
+
+    Async do
+      # Exhaust all 5 fire units
+      5.times do |i|
+        @bus.publish(:dispatch, DispatchOrder.new(
+          call_id: "C-BUD-#{i}", department: "fire",
+          units_requested: 1, priority: 2, eta: "5min"
+        ))
+        sleep 0.02
+      end
+
+      # Next fire call should trigger budget request, NOT escalation
+      @bus.publish(:dispatch, DispatchOrder.new(
+        call_id: "C-BUD-OVER", department: "fire",
+        units_requested: 1, priority: 2, eta: "5min"
+      ))
+      sleep 0.05
+    end
+
+    refute escalation, "Insufficient units should NOT trigger escalation"
+
+    budget_req = display_events.find { |e| e.type == :budget_request }
+    assert budget_req, "Should publish budget_request display event"
+    assert_equal "Fire", budget_req.data[:department]
+    assert_equal "C-BUD-OVER", budget_req.data[:call_id]
+
+    tabled = display_events.find { |e| e.type == :budget_tabled }
+    assert tabled, "Should publish budget_tabled display event"
+    assert_match(/tabled/, tabled.data[:message])
+  end
+
   # ==========================================
   # End-to-end: call → intelligence → operations → field report
   # ==========================================

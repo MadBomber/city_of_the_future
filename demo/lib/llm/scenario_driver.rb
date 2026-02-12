@@ -40,10 +40,18 @@ class ScenarioDriver
   private
 
   KEYWORDS = {
-    "fire"      => %w[fire smoke flames burning blaze explosion],
-    "police"    => %w[robbed robbery gun theft stolen broke\ in assault weapon],
-    "ems"       => %w[chest\ pain breathing heart collapsed injured bleeding unconscious],
-    "utilities" => %w[water pipe burst power outage gas\ leak sewer electrical]
+    "fire"      => %w[fire smoke flames burning blaze explosion grease engulfed],
+    "police"    => %w[robbed robbery gun theft stolen broke\ in assault weapon
+                      fight knife hit\ and\ run breaking\ into road\ rage chase
+                      gunshot shots bank\ robbery shoplifter erratic bat
+                      suspect carjack],
+    "ems"       => %w[chest\ pain breathing heart collapsed injured bleeding
+                      unconscious allergic seizure labor pregnant fell\ from
+                      drowning pulse CPR accident not\ responding overdose
+                      hit\ by struck\ by],
+    "utilities" => %w[water pipe burst power outage gas\ leak sewer electrical
+                      gas\ smell hydrant transformer manhole steam
+                      street\ light corroded flooding brown\ water]
   }.freeze
 
   def classify_from_prompt(prompt)

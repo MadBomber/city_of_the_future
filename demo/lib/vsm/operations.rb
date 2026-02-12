@@ -39,6 +39,8 @@ class Operations
 
     if result[:status] == :dispatched
       dispatch_success(order, dept, result)
+    elsif result[:reason]&.include?("insufficient units")
+      request_budget_increase(order, dept)
     else
       escalate(order, result[:reason], [dept.name])
     end
@@ -103,13 +105,46 @@ class Operations
     end
   end
 
+  def request_budget_increase(order, dept)
+    @logger&.info "Operations: #{dept.name} requests budget increase for #{order.call_id} — all units busy"
+
+    @bus.publish(:display, DisplayEvent.new(
+      type:      :budget_request,
+      data:      { call_id: order.call_id, department: dept.name,
+                   available: dept.available_units, active: dept.to_dept_status.active_calls },
+      timestamp: Time.now
+    ))
+
+    @bus.publish(:voice_out, VoiceOut.new(
+      text:       "#{dept.name} to City Council: All units committed. Requesting budget increase for additional units next fiscal year.",
+      voice:      nil,
+      department: dept.name,
+      priority:   2
+    ))
+
+    # City Council tables the discussion
+    @bus.publish(:display, DisplayEvent.new(
+      type:      :budget_tabled,
+      data:      { call_id: order.call_id, department: dept.name,
+                   message: "City Council acknowledges #{dept.name}'s request. Discussion tabled for next session." },
+      timestamp: Time.now
+    ))
+
+    @bus.publish(:voice_out, VoiceOut.new(
+      text:       "City Council acknowledges the request from #{dept.name}. Budget discussion tabled for next session.",
+      voice:      nil,
+      department: "CityCouncil",
+      priority:   3
+    ))
+  end
+
   def escalate(order, reason, attempted = [])
     @logger&.info "Operations: escalating #{order.call_id} — #{reason}"
 
     @bus.publish(:escalation, Escalation.new(
       call_id:               order.call_id,
       reason:                reason,
-      original_call:         order.department,
+      original_call:         order.description || order.department,
       attempted_departments: attempted,
       timestamp:             Time.now
     ))

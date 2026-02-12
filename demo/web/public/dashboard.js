@@ -107,11 +107,20 @@
       case "method_rejected":
         handleMethodRejected(evt);
         break;
+      case "capability_reused":
+        addEventLine(evt.timestamp, "governance", "REUSED: " + evt.data.target_class + "#" + evt.data.method_name + " for " + evt.data.call_id);
+        break;
       case "escalation_analysis":
         handleEscalationAnalysis(evt);
         break;
       case "method_gen_failed":
         addEventLine(evt.timestamp, "method", "Generation failed: " + evt.data.method);
+        break;
+      case "budget_request":
+        addEventLine(evt.timestamp, "escalation", evt.data.department + " requests budget increase — all units committed (" + evt.data.call_id + ")");
+        break;
+      case "budget_tabled":
+        addEventLine(evt.timestamp, "governance", "City Council: " + evt.data.message);
         break;
       case "adaptation_success":
         handleAdaptationSuccess(evt);
@@ -209,6 +218,25 @@
     addEventLine(evt.timestamp, "governance", "APPROVED: " + d.class + "#" + d.method);
     approvedCount++;
     setText("approved-count", approvedCount);
+
+    if (d.source) {
+      var container = document.getElementById("generated-code");
+      var entry = document.createElement("div");
+      entry.className = "generated-entry";
+
+      var header = document.createElement("div");
+      header.className = "generated-entry-header";
+      header.textContent = d.class + "#" + d.method;
+
+      var pre = document.createElement("pre");
+      var code = document.createElement("code");
+      code.textContent = d.source;
+      pre.appendChild(code);
+
+      entry.appendChild(header);
+      entry.appendChild(pre);
+      container.appendChild(entry);
+    }
   }
 
   function handleMethodRejected(evt) {
@@ -392,18 +420,124 @@
     return div.innerHTML;
   }
 
+  // --- Random Scenario Pools ---
+
+  var callerNames = [
+    "Maria Santos", "James Wilson", "Lisa Chen", "Tom Bradley", "Derek Nguyen",
+    "Sarah Johnson", "Mike Rivera", "Angela Park", "David Thompson", "Rosa Martinez",
+    "Kevin O'Brien", "Priya Sharma", "Carlos Mendez", "Nina Volkov", "Jamal Washington",
+    "Helen Kim", "Frank DeLuca", "Yuki Tanaka", "Omar Hassan", "Bridget Murphy"
+  ];
+
+  var locations = [
+    "4th and Main Street", "Oak Street and 12th Avenue", "200 Elm Street",
+    "Industrial Boulevard", "Downtown, Central Square", "7th and Pine",
+    "Financial District, 5th Avenue", "Westside Community Center",
+    "Parking garage on Oak", "300 block of Maple Drive",
+    "Corner of Broadway and 3rd", "Riverside Park", "The waterfront district",
+    "Near City Hall", "Highway 9 overpass"
+  ];
+
+  var scenarios = {
+    fire: {
+      severity: ["high", "critical", "high", "medium"],
+      descriptions: [
+        "There's smoke pouring out of the building! The whole second floor is on fire!",
+        "A kitchen fire at Romano's restaurant has spread to the dining room! People are evacuating!",
+        "Electrical fire in apartment 4B! Sparks shooting from the walls and the smoke is thick!",
+        "Car fire on the highway! The engine is fully engulfed and it's spreading to the grass!",
+        "The old warehouse on Industrial is on fire! There might be chemicals stored inside!",
+        "A dumpster fire behind the grocery store has spread to the building! The wall is burning!",
+        "Lightning struck a house on Maple and the roof is on fire! Family is still inside!",
+        "Grease fire at the food truck festival! Multiple vendors affected, crowd panicking!",
+        "Gas station pump is on fire! Everyone's running and I can hear small explosions!",
+        "Apartment building fire! Smoke is coming from multiple floors, people on the fire escapes!"
+      ]
+    },
+    police: {
+      severity: ["critical", "high", "critical", "high"],
+      descriptions: [
+        "Someone just robbed the corner store! They had a gun and ran east on Oak!",
+        "There's a fight outside the bar on Broadway! One guy pulled a knife!",
+        "I just witnessed a hit and run! Silver SUV took off heading north on 5th!",
+        "Someone is breaking into the house across the street right now! I can see them in the window!",
+        "Road rage incident on Highway 9! Two drivers are out of their cars screaming, one has a bat!",
+        "There's a man acting erratic at Central Square, screaming at people and throwing things!",
+        "Car chase through downtown! A pickup truck just blew through two red lights!",
+        "Bank robbery in progress at First National! Multiple suspects, they blocked the doors!",
+        "Gunshots near the park! People are running and screaming, I'm hiding behind a car!",
+        "Shoplifter at the electronics store pulled a weapon on the security guard!"
+      ]
+    },
+    ems: {
+      severity: ["critical", "high", "critical", "high"],
+      descriptions: [
+        "My husband is having chest pains! He's sweating and can't breathe!",
+        "Someone collapsed on the sidewalk! They're not responding and I can't find a pulse!",
+        "Bad car accident at the intersection! Driver is trapped and bleeding from the head!",
+        "My daughter is having a severe allergic reaction! Her throat is swelling shut!",
+        "Construction worker fell from the scaffolding! He's conscious but can't move his legs!",
+        "Elderly woman found unconscious in her apartment! She's breathing but won't wake up!",
+        "Kid at the pool isn't breathing! Lifeguard is doing CPR right now!",
+        "Man having a seizure on the bus! He hit his head on the way down, there's blood everywhere!",
+        "Pregnant woman in labor at the grocery store! The baby is coming fast, she can't move!",
+        "Cyclist was hit by a car! They're in the road, leg is bent the wrong way!"
+      ]
+    },
+    utilities: {
+      severity: ["medium", "high", "medium", "high"],
+      descriptions: [
+        "There's water shooting up from the street! A pipe must have burst!",
+        "Strong gas smell in the whole neighborhood! My detector is going off!",
+        "Power is out for the entire block and I can see sparks at the transformer on the pole!",
+        "Sewer is backing up into the basement! The whole street smells terrible!",
+        "A tree fell on the power lines! They're sparking on the ground, blocking the road!",
+        "A car knocked over a hydrant and water is flooding the intersection!",
+        "The water coming out of our taps is brown! The whole building is affected!",
+        "Manhole cover blew off and steam is shooting 20 feet in the air!",
+        "Street light pole is leaning and about to fall! The base is completely corroded!",
+        "Underground electrical vault is smoking! I can see flames through the grate!"
+      ]
+    },
+    unknown: {
+      severity: ["critical", "high", "critical", "high"],
+      descriptions: [
+        "There are drones everywhere downtown! Hundreds of them dropping papers!",
+        "Something just opened in the sky above Central Square! It's like a hole in the air with light pouring through and things are coming out of it! This is like that New York attack!",
+        "The ground is shaking and a massive sinkhole just opened up on Elm Street! Cars are falling in!",
+        "Strange glowing fog is rolling down Main Street! Everyone who walks into it comes out confused and can't remember who they are!",
+        "There's a swarm of something flying over downtown! They're not birds, they're too big and they're metallic! They're landing on buildings!",
+        "Giant creatures are coming out of the river! They look like armored centipedes the size of buses! People are running!",
+        "Some kind of portal opened at the park and armored figures are marching through! They've got weapons I've never seen before! It's an invasion!",
+        "Every car on 5th Avenue just stopped working at the same time! Electronics are dead, nothing turns on! Something is jamming everything!",
+        "A beam of light just hit the clock tower and now there's a force field expanding from it! It's pushing everything outward!",
+        "Something crashed in the financial district! It's not a plane, it's some kind of craft and it's still glowing! Figures are emerging from it!"
+      ]
+    }
+  };
+
+  function randomFrom(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+
+  function randomScenario(type) {
+    var pool = scenarios[type];
+    return {
+      caller:      randomFrom(callerNames),
+      location:    randomFrom(locations),
+      description: randomFrom(pool.descriptions),
+      severity:    randomFrom(pool.severity)
+    };
+  }
+
   // --- Quick Call Buttons ---
 
   var quickButtons = document.querySelectorAll(".quick-call");
   for (var i = 0; i < quickButtons.length; i++) {
     quickButtons[i].addEventListener("click", function() {
       var btn = this;
-      var payload = {
-        caller:      btn.getAttribute("data-caller"),
-        location:    btn.getAttribute("data-location"),
-        description: btn.getAttribute("data-description"),
-        severity:    btn.getAttribute("data-severity")
-      };
+      var type = btn.getAttribute("data-type");
+      var payload = randomScenario(type);
 
       fetch("/calls", {
         method: "POST",

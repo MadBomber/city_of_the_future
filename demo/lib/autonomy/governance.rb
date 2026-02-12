@@ -35,7 +35,8 @@ class Governance
         install_method(gen)
         bus.publish(:display, DisplayEvent.new(
           type: :method_installed,
-          data: { class: gen.target_class, method: gen.method_name },
+          data: { class: gen.target_class, method: gen.method_name,
+                  source: gen.source_code },
           timestamp: Time.now
         ))
         bus.publish(:voice_out, VoiceOut.new(

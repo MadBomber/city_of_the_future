@@ -28,7 +28,10 @@
       "Bash(VOICE=off LLM_MODE=replay timeout 60 bundle exec ruby:*)",
       "Bash(VOICE=off LLM_MODE=replay timeout 25 bundle exec ruby:*)",
       "Bash(VOICE=off LLM_MODE=replay timeout 30 bundle exec ruby:*)",
-      "Bash(VOICE=off ruby bin/demo:*)"
+      "Bash(VOICE=off ruby bin/demo:*)",
+      "mcp__plugin_compound-engineering_pw__browser_take_screenshot",
+      "mcp__plugin_compound-engineering_pw__browser_navigate",
+      "mcp__plugin_compound-engineering_pw__browser_click"
     ]
   }
 }

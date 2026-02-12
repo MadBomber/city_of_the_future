@@ -211,6 +211,42 @@ header h1 {
 #governance-stats div { margin-bottom: 2px; }
 #governance-stats span { color: #00ffaa; }
 
+#generated-code {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #2a2a4a;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.generated-entry {
+  margin-bottom: 8px;
+}
+
+.generated-entry-header {
+  font-size: 11px;
+  color: #ffaa44;
+  margin-bottom: 4px;
+}
+
+.generated-entry pre {
+  max-height: 150px;
+  overflow-y: auto;
+  background: #0d0d1a;
+  border: 1px solid #2a2a4a;
+  border-radius: 4px;
+  padding: 8px;
+  margin: 0;
+}
+
+.generated-entry code {
+  font-family: inherit;
+  font-size: 11px;
+  color: #44ffaa;
+  white-space: pre;
+}
+
 /* Event Stream */
 
 #event-stream {

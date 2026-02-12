@@ -38,12 +38,24 @@ class Governance
           data: { class: gen.target_class, method: gen.method_name },
           timestamp: Time.now
         ))
+        bus.publish(:voice_out, VoiceOut.new(
+          text:       "Governance approved. Method #{gen.method_name} installed on #{gen.target_class}.",
+          voice:      nil,
+          department: "System",
+          priority:   1
+        ))
         delivery.ack!
       else
         bus.publish(:display, DisplayEvent.new(
           type: :method_rejected,
           data: { class: gen.target_class, method: gen.method_name, reason: reason },
           timestamp: Time.now
+        ))
+        bus.publish(:voice_out, VoiceOut.new(
+          text:       "Governance rejected method #{gen.method_name}. Reason: #{reason}.",
+          voice:      nil,
+          department: "System",
+          priority:   1
         ))
         delivery.nack!
       end

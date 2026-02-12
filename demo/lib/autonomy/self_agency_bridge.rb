@@ -34,6 +34,13 @@ class SelfAgencyBridge
       timestamp: Time.now
     ))
 
+    @bus.publish(:voice_out, VoiceOut.new(
+      text:       "Generating new capability: #{method_name} for #{@target_class}.",
+      voice:      nil,
+      department: "System",
+      priority:   1
+    ))
+
     prompt = <<~PROMPT
       Generate a Ruby method `#{method_name}` for class `#{@target_class}`.
 

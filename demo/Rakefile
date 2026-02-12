@@ -64,6 +64,12 @@ namespace :test do
     t.test_files = ["test/replay_robot_test.rb"]
     t.warning = false
   end
+
+  Rake::TestTask.new(:autonomy_integration) do |t|
+    t.libs << "lib" << "test"
+    t.test_files = ["test/autonomy_integration_test.rb"]
+    t.warning = false
+  end
 end
 
 task default: :test

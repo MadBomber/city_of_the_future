@@ -136,8 +136,51 @@ class Layer3Test < Minitest::Test
   # --- VOICES constant covers expected departments ---
 
   def test_voices_covers_expected_departments
-    expected = %i[dispatch caller fire police ems utilities council system]
+    expected = %i[dispatch caller fire police ems utilities council citycouncil operations system]
     assert_equal expected.sort, Speaker::VOICES.keys.sort
+  end
+
+  # --- Speaker resolves capitalized string department names ---
+
+  def test_speaker_resolves_capitalized_department_names
+    mapping = {
+      "Fire"        => "Daniel",
+      "Police"      => "Karen",
+      "EMS"         => "Moira",
+      "Utilities"   => "Fred",
+      "CityCouncil" => "Flo",
+      "Operations"  => "Samantha",
+      "System"      => "Zarvox",
+    }
+
+    mapping.each do |dept_name, expected_voice|
+      speaker = Speaker.new(enabled: false)
+      speaker.attach(@bus)
+
+      Async do
+        received = nil
+
+        @bus.subscribe(:display) do |delivery|
+          received = delivery.message
+          delivery.ack!
+        end
+
+        @bus.publish(:voice_out, VoiceOut.new(
+          text:       "Test",
+          voice:      nil,
+          department: dept_name,
+          priority:   :normal
+        ))
+
+        sleep 0.05
+
+        assert_equal expected_voice, received.data[:voice],
+          "Department '#{dept_name}' should use voice #{expected_voice}"
+      end
+
+      @bus.close_all
+      @bus = BusSetup.create_bus
+    end
   end
 
   # --- Listener transcribes and publishes call ---

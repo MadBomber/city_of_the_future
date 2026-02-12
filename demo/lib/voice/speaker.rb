@@ -1,13 +1,15 @@
 class Speaker
   VOICES = {
-    dispatch:  "Samantha",
-    caller:    "Reed",
-    fire:      "Daniel",
-    police:    "Karen",
-    ems:       "Moira",
-    utilities: "Fred",
-    council:   "Flo",
-    system:    "Zarvox"
+    dispatch:    "Samantha",
+    caller:      "Reed",
+    fire:        "Daniel",
+    police:      "Karen",
+    ems:         "Moira",
+    utilities:   "Fred",
+    council:     "Flo",
+    citycouncil: "Flo",
+    operations:  "Samantha",
+    system:      "Zarvox"
   }.freeze
 
   def initialize(logger: nil, enabled: true)
@@ -18,7 +20,7 @@ class Speaker
   def attach(bus)
     bus.subscribe(:voice_out) do |delivery|
       vout  = delivery.message
-      voice = VOICES[vout.department&.to_sym] || VOICES[:system]
+      voice = resolve_voice(vout.department)
 
       if @enabled
         @logger&.info "Speaking [#{voice}]: #{vout.text}"
@@ -36,5 +38,12 @@ class Speaker
 
       delivery.ack!
     end
+  end
+
+  private
+
+  def resolve_voice(department)
+    key = department.to_s.downcase.to_sym
+    VOICES[key] || VOICES[:system]
   end
 end

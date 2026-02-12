@@ -59,19 +59,22 @@ class DashboardApp < Sinatra::Base
     content_type :json
     bus = settings.bus
 
-    stats = {}
+    all_stats = bus.stats.to_h
+    result = {}
+
     bus.channel_names.each do |name|
-      ch_stats = bus.stats(name)
-      stats[name] = {
-        published: ch_stats[:published],
-        delivered: ch_stats[:delivered],
-        nacked:    ch_stats[:nacked],
+      pub_key  = :"#{name}_published"
+      del_key  = :"#{name}_delivered"
+      nack_key = :"#{name}_nacked"
+
+      result[name] = {
+        published: all_stats[pub_key] || 0,
+        delivered: all_stats[del_key] || 0,
+        nacked:    all_stats[nack_key] || 0,
         dlq_depth: bus.dead_letters(name).size
       }
-    rescue
-      stats[name] = { published: 0, delivered: 0, nacked: 0, dlq_depth: 0 }
     end
 
-    JSON.generate(stats)
+    JSON.generate(result)
   end
 end

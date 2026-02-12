@@ -24,6 +24,7 @@ class Speaker
     bus.subscribe(:voice_out) do |delivery|
       vout  = delivery.message
       voice = vout.voice || resolve_voice(vout.department)
+      delivery.ack!
 
       @semaphore.acquire do
         if @enabled
@@ -40,8 +41,6 @@ class Speaker
         data:      { department: vout.department, text: vout.text, voice: voice },
         timestamp: Time.now
       ))
-
-      delivery.ack!
     end
   end
 

@@ -17,11 +17,16 @@ module BusSetup
     display:           { type: DisplayEvent,   timeout: 5 },
   }.freeze
 
-  def self.create_bus
+  def self.create_bus(logger: nil)
     bus = TypedBus::MessageBus.new
 
     CHANNELS.each do |name, opts|
       bus.add_channel(name, **opts)
+
+      bus.dead_letters(name).on_dead_letter do |delivery|
+        reason = delivery.timed_out? ? "timeout" : "nack"
+        logger&.warn "DLQ [#{name}]: #{delivery.message.class} — #{reason}"
+      end
     end
 
     bus

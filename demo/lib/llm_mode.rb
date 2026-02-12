@@ -5,10 +5,10 @@ require_relative "llm/scenario_driver"
 module LLMMode
   MODES = %w[live record replay].freeze
 
-  def self.setup(bus, mode:, scenario_path: nil)
+  def self.setup(bus, mode:, scenario_path: nil, logger: nil)
     case mode
     when "live"
-      handler = LiveHandler.new
+      handler = LiveHandler.new(logger: logger)
       handler.attach(bus)
       handler
     when "record"

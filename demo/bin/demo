@@ -30,7 +30,7 @@ $logger.info "Demo starting (pid #{Process.pid})"
 
 # --- Bus ---
 
-bus = BusSetup.create_bus
+bus = BusSetup.create_bus(logger: $logger)
 $logger.info "Bus created with #{bus.channel_names.size} channels: #{bus.channel_names.join(', ')}"
 
 # --- LLM mode ---
@@ -39,7 +39,7 @@ mode          = ENV.fetch("LLM_MODE", "replay")
 scenario_path = ENV["SCENARIO_PATH"]
 scenario_path = nil if scenario_path&.empty?
 
-handler = LLMMode.setup(bus, mode: mode, scenario_path: scenario_path)
+handler = LLMMode.setup(bus, mode: mode, scenario_path: scenario_path, logger: $logger)
 $logger.info "LLM handler attached in #{mode} mode (#{handler.class})"
 
 # --- Voice I/O ---
@@ -81,21 +81,12 @@ governance = Governance.new(logger: $logger)
 governance.attach(bus)
 $logger.info "Governance attached"
 
-# Code generation robot
-if mode == "replay"
-  require_relative "../lib/llm/replay_robot"
-  robot_path = File.expand_path("../scenarios/demo_robot.yml", __dir__)
-  code_gen_robot = ReplayRobot.new(robot_path, logger: $logger)
-  $logger.info "Using ReplayRobot for code generation"
-else
-  require "robot_lab"
-  code_gen_robot = RobotLab.build(
-    name: "code_generator",
-    system_prompt: "You are a Ruby code generator for a 911 dispatch system. Generate ONLY def...end method definitions. No class wrappers. No explanations. Methods must be safe — no system/exec/eval/File/IO.",
-    temperature: 0.3
-  )
-  $logger.info "Using RobotLab for code generation"
-end
+# Code generation robot — always use ReplayRobot so the autonomy
+# demo is reliable regardless of LLM availability
+require_relative "../lib/llm/replay_robot"
+robot_path = File.expand_path("../scenarios/demo_robot.yml", __dir__)
+code_gen_robot = ReplayRobot.new(robot_path, logger: $logger)
+$logger.info "Using ReplayRobot for code generation"
 
 chaos = ChaosBridge.new(robot: code_gen_robot, logger: $logger)
 chaos.attach(bus)

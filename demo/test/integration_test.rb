@@ -301,15 +301,16 @@ class IntegrationTest < Minitest::Test
 
     # Phase 1: Normal Operations — 4 calls dispatched
     # Phase 2: Stress — calls dispatched (fire C-005 needs 3 units, fire has 3 left)
-    # Phase 3: Unknown — C-008 dispatched to CityCouncil (catches anything)
-    # Phase 4: Adaptation — C-009 CityCouncil at 0 units → escalation
+    # Phase 3: Unknown — C-008 "drones" → no department handles it → escalation
+    # Phase 4: Adaptation — C-009 "more drones" → escalation
+    # (Without autonomy layer, both unknown calls escalate)
 
     total_handled = field_reports.size + escalations.size
     assert_equal 9, total_handled,
       "All 9 calls should be handled (#{field_reports.size} dispatched, #{escalations.size} escalated)"
 
-    assert field_reports.size >= 8, "At least 8 calls should be dispatched"
-    assert escalations.size >= 1, "At least 1 call should escalate (C-009, CityCouncil at capacity)"
+    assert field_reports.size >= 7, "At least 7 calls should be dispatched"
+    assert escalations.size >= 2, "At least 2 calls should escalate (C-008 and C-009, unknown department)"
   end
 
   # ==========================================

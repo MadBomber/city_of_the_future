@@ -6,19 +6,27 @@
     - "escalation"
     - "insufficient units"
     - "coordinate"
+    - "No department available"
   response: |
     ```ruby
-    def coordinate_insufficient_units_01(call_id: nil, **context)
+    def coordinate_drone_response(call_id: nil, **context)
       {
         status: :coordinated,
         plan: "Multi-agency drone response activated",
+        departments: [
+          { department: "Fire",      units_requested: 1, role: "Public safety standby" },
+          { department: "Police",    units_requested: 1, role: "Perimeter and crowd control" },
+          { department: "EMS",       units_requested: 1, role: "Medical standby for injuries" },
+          { department: "Utilities", units_requested: 1, role: "Power grid protection" }
+        ],
         steps: [
           "Alert FAA regional office",
           "Deploy police perimeter around affected area",
           "Request fire department standby for public safety",
+          "Station EMS units for potential injuries",
+          "Utilities to secure power grid from drone interference",
           "Activate emergency broadcast for downtown area"
         ],
-        units_assigned: 1,
         notes: "Novel threat coordinated by CityCouncil emergency protocol"
       }
     end

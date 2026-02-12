@@ -47,12 +47,20 @@ class AutonomyIntegrationTest < Minitest::Test
     agency = SelfAgencyBridge.new(robot: robot)
     agency.attach(@bus)
 
+    # Register departments so multi-agency dispatch has targets
+    fire   = FireDepartment.new
+    police = PoliceDepartment.new
+    ems    = EMS.new
+    utils  = Utilities.new
+    [fire, police, ems, utils].each { |d| ops.register(d) }
+
     # Collect events
     escalations    = []
     method_gens    = []
     governance_evts = []
     voice_outs     = []
     display_evts   = []
+    field_reports  = []
 
     @bus.subscribe(:escalation) do |delivery|
       escalations << delivery.message
@@ -75,28 +83,24 @@ class AutonomyIntegrationTest < Minitest::Test
     end
 
     @bus.subscribe(:department_status) { |d| d.ack! }
-    @bus.subscribe(:field_reports)     { |d| d.ack! }
+    @bus.subscribe(:field_reports) do |delivery|
+      field_reports << delivery.message
+      delivery.ack!
+    end
 
-    # Send two drone calls: C-008 depletes CityCouncil, C-009 escalates
+    # Send one drone call: no department handles "unknown" → immediate escalation
     Async do
       @bus.publish(:calls, EmergencyCall.new(
         call_id: "C-008", caller: "Derek", location: "Downtown",
         description: "Drones everywhere", severity: :high, timestamp: Time.now
       ))
 
-      sleep 0.5
-
-      @bus.publish(:calls, EmergencyCall.new(
-        call_id: "C-009", caller: "Patricia", location: "5th Avenue",
-        description: "More drones buzzing buildings", severity: :high, timestamp: Time.now
-      ))
-
-      sleep 1.5
+      sleep 2.0
     end
 
     # Verify escalation happened
-    assert_equal 1, escalations.size, "C-009 should escalate"
-    assert_equal "C-009", escalations[0].call_id
+    assert escalations.size >= 1, "Drone call should escalate"
+    assert_equal "C-008", escalations[0].call_id
 
     # Verify governance approved the method
     approved = governance_evts.select { |e| e.decision == :approved }
@@ -116,13 +120,22 @@ class AutonomyIntegrationTest < Minitest::Test
     # Verify adaptation retry
     retry_voice = voice_texts.find { |t| t.include?("handled using new capability") }
     assert retry_voice, "SelfAgencyBridge should announce retry success via voice"
-    assert_match(/C-009/, retry_voice)
+    assert_match(/C-008/, retry_voice)
 
     # Verify display events include the full pipeline
     display_types = display_evts.map(&:type)
     assert_includes display_types, :escalation_analysis, "Should show escalation analysis"
     assert_includes display_types, :method_installed, "Should show method installed"
     assert_includes display_types, :adaptation_success, "Should show adaptation success"
+
+    # Verify multi-agency dispatch
+    assert field_reports.size >= 4,
+      "Multi-agency dispatch should deploy units from Fire, Police, EMS, Utilities (got #{field_reports.size})"
+    dispatched_depts = field_reports.map(&:department).sort
+    assert_includes dispatched_depts, "Fire", "Fire should be dispatched"
+    assert_includes dispatched_depts, "Police", "Police should be dispatched"
+    assert_includes dispatched_depts, "EMS", "EMS should be dispatched"
+    assert_includes dispatched_depts, "Utilities", "Utilities should be dispatched"
   end
 
   # ==========================================
@@ -233,14 +246,16 @@ class AutonomyIntegrationTest < Minitest::Test
       sleep 1.0
     end
 
-    # The method from ReplayRobot's escalation response is coordinate_insufficient_units_01
+    # The method from ReplayRobot's escalation response is coordinate_drone_response
     council = CityCouncil.new
 
-    assert council.respond_to?(:coordinate_insufficient_units_01),
-      "CityCouncil should now have coordinate_insufficient_units_01 installed"
+    assert council.respond_to?(:coordinate_drone_response),
+      "CityCouncil should now have coordinate_drone_response installed"
 
-    result = council.coordinate_insufficient_units_01
+    result = council.coordinate_drone_response
     assert_kind_of Hash, result, "Installed method should return a Hash"
     assert_equal :coordinated, result[:status]
+    assert result[:departments], "Response should include multi-department plan"
+    assert_equal 4, result[:departments].size, "Should plan dispatch for 4 departments"
   end
 end

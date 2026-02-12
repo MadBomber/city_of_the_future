@@ -60,15 +60,17 @@ class SelfAgencyBridge
     source  = CodeExtractor.extract(content)
 
     if source
-      @logger&.info "SelfAgencyBridge: generated #{@target_class}##{method_name}"
+      # Use the actual method name from the generated source
+      actual_name = source[/\bdef\s+(\w+)/, 1] || method_name
+      @logger&.info "SelfAgencyBridge: generated #{@target_class}##{actual_name}"
       @bus.publish(:method_gen, MethodGen.new(
         target_class: @target_class,
-        method_name:  method_name,
+        method_name:  actual_name,
         source_code:  source,
         status:       :pending
       ))
 
-      retry_with_new_capability(esc, method_name)
+      retry_with_new_capability(esc, actual_name)
     else
       @logger&.info "SelfAgencyBridge: extraction failed"
       @bus.publish(:display, DisplayEvent.new(
@@ -103,7 +105,24 @@ class SelfAgencyBridge
                    target_class: @target_class, result: result },
       timestamp: Time.now
     ))
+
+    dispatch_multi_agency(esc, result) if result[:departments]
   rescue => e
     @logger&.info "SelfAgencyBridge: retry failed for #{esc.call_id} — #{e.message}"
+  end
+
+  def dispatch_multi_agency(esc, result)
+    result[:departments].each do |dept_plan|
+      dept_name = dept_plan[:department]
+      @logger&.info "SelfAgencyBridge: multi-agency dispatch #{dept_name} for #{esc.call_id}"
+
+      @bus.publish(:dispatch, DispatchOrder.new(
+        call_id:         "#{esc.call_id}-#{dept_name[0..2].upcase}",
+        department:      dept_name.downcase,
+        units_requested: dept_plan[:units_requested] || 1,
+        priority:        1,
+        eta:             "immediate"
+      ))
+    end
   end
 end

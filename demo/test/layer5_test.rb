@@ -70,14 +70,11 @@ class Layer5Test < Minitest::Test
     assert_match(/^UT-/, result[:unit_id])
   end
 
-  def test_city_council_handles_anything
+  def test_city_council_rejects_unknown_types
     dept  = CityCouncil.new
     order = DispatchOrder.new(call_id: "C-6", department: "alien_invasion", units_requested: 1, priority: 1, eta: "unknown")
 
-    assert dept.can_handle?(order)
-    result = dept.handle(order)
-    assert_equal :dispatched, result[:status]
-    assert_match(/^CC-/, result[:unit_id])
+    refute dept.can_handle?(order), "CityCouncil should not catch-all unknown types"
   end
 
   def test_department_rejects_insufficient_units

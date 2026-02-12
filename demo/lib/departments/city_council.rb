@@ -8,7 +8,7 @@ class CityCouncil < BaseDepartment
     )
   end
 
-  def can_handle?(_dispatch_order)
-    true
+  def can_handle?(dispatch_order)
+    @handles.include?(dispatch_order.department.to_sym)
   end
 end

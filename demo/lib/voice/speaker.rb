@@ -1,3 +1,5 @@
+require "async/semaphore"
+
 class Speaker
   VOICES = {
     dispatch:    "Samantha",
@@ -13,8 +15,9 @@ class Speaker
   }.freeze
 
   def initialize(logger: nil, enabled: true)
-    @logger  = logger
-    @enabled = enabled
+    @logger    = logger
+    @enabled   = enabled
+    @semaphore = Async::Semaphore.new(1)
   end
 
   def attach(bus)
@@ -22,12 +25,14 @@ class Speaker
       vout  = delivery.message
       voice = vout.voice || resolve_voice(vout.department)
 
-      if @enabled
-        @logger&.info "Speaking [#{voice}]: #{vout.text}"
-        pid = spawn("say", "-v", voice, vout.text)
-        Process.wait(pid)
-      else
-        @logger&.info "Speaker disabled, skipping [#{voice}]: #{vout.text}"
+      @semaphore.acquire do
+        if @enabled
+          @logger&.info "Speaking [#{voice}]: #{vout.text}"
+          pid = spawn("say", "-v", voice, vout.text)
+          Process.wait(pid)
+        else
+          @logger&.info "Speaker disabled, skipping [#{voice}]: #{vout.text}"
+        end
       end
 
       bus.publish(:display, DisplayEvent.new(

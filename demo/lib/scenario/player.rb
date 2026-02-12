@@ -4,8 +4,8 @@ class ScenarioPlayer
   # Human voices for callers, excluding Samantha (dispatch).
   # Avoids department voices: Daniel, Karen, Moira, Fred, Flo, Zarvox.
   CALLER_VOICES = %w[
-    Alex Allison Ava Kate Oliver
-    Rishi Tessa Tom Victoria
+    Rishi Tessa Kathy Ralph Junior
+    Tara Aman Reed Albert
   ].freeze
 
   attr_reader :calls_played
@@ -16,6 +16,7 @@ class ScenarioPlayer
     @skip_delays = skip_delays
     @phase_callback = nil
     @calls_played   = 0
+    @dispatched     = {}
   end
 
   def on_phase(&block)
@@ -24,6 +25,16 @@ class ScenarioPlayer
 
   def attach(bus)
     @bus = bus
+
+    bus.subscribe(:field_reports) do |delivery|
+      @dispatched[delivery.message.call_id] = true
+      delivery.ack!
+    end
+
+    bus.subscribe(:escalation) do |delivery|
+      @dispatched[delivery.message.call_id] = true
+      delivery.ack!
+    end
   end
 
   def play
@@ -79,6 +90,15 @@ class ScenarioPlayer
 
     @bus.publish(:calls, call)
     @calls_played += 1
+
+    await_dispatch(call.call_id)
+  end
+
+  def await_dispatch(call_id, timeout: 10)
+    return if @skip_delays
+
+    deadline = Time.now + timeout
+    sleep 0.05 until @dispatched.delete(call_id) || Time.now > deadline
   end
 
   def wait(seconds)

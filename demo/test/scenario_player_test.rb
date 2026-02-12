@@ -305,8 +305,8 @@ class ScenarioPlayerTest < Minitest::Test
       assert_equal "Someone broke in!", caller_voices[1].text
 
       # Each caller gets a distinct voice from the rotation
-      assert_equal "Alex", caller_voices[0].voice
-      assert_equal "Allison", caller_voices[1].voice
+      assert_equal "Rishi", caller_voices[0].voice
+      assert_equal "Tessa", caller_voices[1].voice
       refute_equal caller_voices[0].voice, caller_voices[1].voice
 
       # No caller should use Samantha (dispatch voice)

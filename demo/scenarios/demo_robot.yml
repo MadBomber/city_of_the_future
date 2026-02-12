@@ -8,7 +8,7 @@
     - "coordinate"
   response: |
     ```ruby
-    def coordinate_drone_response(call_id: nil, **context)
+    def coordinate_insufficient_units_01(call_id: nil, **context)
       {
         status: :coordinated,
         plan: "Multi-agency drone response activated",

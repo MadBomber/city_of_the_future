@@ -120,6 +120,7 @@ header h1 {
 .call-card.utilities { border-color: #ffaa44; }
 .call-card.unknown  { border-color: #ff44ff; }
 .call-card.escalated { border-color: #ff44ff; background: #1a0a2e; }
+.call-card.adapted  { border-color: #44ffaa; background: #0a2a1a; }
 .call-card.resolved { border-color: #2a2a4a; opacity: 0.5; }
 
 .call-id {

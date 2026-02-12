@@ -91,7 +91,7 @@ class AutonomyIntegrationTest < Minitest::Test
         description: "More drones buzzing buildings", severity: :high, timestamp: Time.now
       ))
 
-      sleep 1.0
+      sleep 1.5
     end
 
     # Verify escalation happened
@@ -113,10 +113,16 @@ class AutonomyIntegrationTest < Minitest::Test
     assert approved_voice, "Governance should announce approval via voice"
     assert_match(/installed/, approved_voice)
 
+    # Verify adaptation retry
+    retry_voice = voice_texts.find { |t| t.include?("handled using new capability") }
+    assert retry_voice, "SelfAgencyBridge should announce retry success via voice"
+    assert_match(/C-009/, retry_voice)
+
     # Verify display events include the full pipeline
     display_types = display_evts.map(&:type)
     assert_includes display_types, :escalation_analysis, "Should show escalation analysis"
     assert_includes display_types, :method_installed, "Should show method installed"
+    assert_includes display_types, :adaptation_success, "Should show adaptation success"
   end
 
   # ==========================================
@@ -186,7 +192,7 @@ class AutonomyIntegrationTest < Minitest::Test
         timestamp:             Time.now
       ))
 
-      sleep 0.3
+      sleep 0.8
     end
 
     # Voice should announce generation
@@ -224,16 +230,16 @@ class AutonomyIntegrationTest < Minitest::Test
         timestamp:             Time.now
       ))
 
-      sleep 0.5
+      sleep 1.0
     end
 
-    # The method from ReplayRobot's escalation response is coordinate_drone_response
+    # The method from ReplayRobot's escalation response is coordinate_insufficient_units_01
     council = CityCouncil.new
 
-    assert council.respond_to?(:coordinate_drone_response),
-      "CityCouncil should now have coordinate_drone_response installed"
+    assert council.respond_to?(:coordinate_insufficient_units_01),
+      "CityCouncil should now have coordinate_insufficient_units_01 installed"
 
-    result = council.coordinate_drone_response
+    result = council.coordinate_insufficient_units_01
     assert_kind_of Hash, result, "Installed method should return a Hash"
     assert_equal :coordinated, result[:status]
   end

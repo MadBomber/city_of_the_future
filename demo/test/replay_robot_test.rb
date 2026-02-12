@@ -32,12 +32,12 @@ class ReplayRobotTest < Minitest::Test
 
   def test_matches_escalation_pattern
     result = @robot.run(message: "An emergency escalation occurred for call C-009")
-    assert_match(/coordinate_drone_response/, result.last_text_content)
+    assert_match(/coordinate_insufficient_units_01/, result.last_text_content)
   end
 
   def test_matches_insufficient_units_pattern
     result = @robot.run(message: "Reason: insufficient units (0/1)")
-    assert_match(/coordinate_drone_response/, result.last_text_content)
+    assert_match(/coordinate_insufficient_units_01/, result.last_text_content)
   end
 
   def test_matches_method_missing_pattern
@@ -52,7 +52,7 @@ class ReplayRobotTest < Minitest::Test
 
   def test_pattern_matching_is_case_insensitive
     result = @robot.run(message: "ESCALATION occurred!")
-    assert_match(/coordinate_drone_response/, result.last_text_content)
+    assert_match(/coordinate_insufficient_units_01/, result.last_text_content)
   end
 
   # ==========================================
@@ -63,7 +63,7 @@ class ReplayRobotTest < Minitest::Test
     result = @robot.run(message: "escalation for call C-009")
     source = CodeExtractor.extract(result.last_text_content)
     assert source, "CodeExtractor should extract a method from the escalation response"
-    assert_match(/\Adef\s+coordinate_drone_response/, source)
+    assert_match(/\Adef\s+coordinate_insufficient_units_01/, source)
     assert_match(/^end\z/, source)
   end
 

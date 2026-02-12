@@ -26,7 +26,8 @@
       "Bash(say:*)",
       "Bash(VOICE=off LLM_MODE=replay timeout 15 bundle exec ruby:*)",
       "Bash(VOICE=off LLM_MODE=replay timeout 60 bundle exec ruby:*)",
-      "Bash(VOICE=off LLM_MODE=replay timeout 25 bundle exec ruby:*)"
+      "Bash(VOICE=off LLM_MODE=replay timeout 25 bundle exec ruby:*)",
+      "Bash(VOICE=off LLM_MODE=replay timeout 30 bundle exec ruby:*)"
     ]
   }
 }

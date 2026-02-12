@@ -67,6 +67,8 @@ class SelfAgencyBridge
         source_code:  source,
         status:       :pending
       ))
+
+      retry_with_new_capability(esc, method_name)
     else
       @logger&.info "SelfAgencyBridge: extraction failed"
       @bus.publish(:display, DisplayEvent.new(
@@ -75,5 +77,33 @@ class SelfAgencyBridge
         timestamp: Time.now
       ))
     end
+  end
+
+  def retry_with_new_capability(esc, method_name)
+    # Allow governance to process and install the method
+    sleep 0.3
+
+    klass = Object.const_get(@target_class)
+    return unless klass.method_defined?(method_name)
+
+    instance = klass.new
+    result = instance.public_send(method_name, call_id: esc.call_id)
+    @logger&.info "SelfAgencyBridge: retried #{esc.call_id} via #{@target_class}##{method_name} → #{result[:status]}"
+
+    @bus.publish(:voice_out, VoiceOut.new(
+      text:       "Call #{esc.call_id} handled using new capability. #{result[:plan] || result[:notes]}",
+      voice:      nil,
+      department: @target_class,
+      priority:   1
+    ))
+
+    @bus.publish(:display, DisplayEvent.new(
+      type:      :adaptation_success,
+      data:      { call_id: esc.call_id, method: method_name,
+                   target_class: @target_class, result: result },
+      timestamp: Time.now
+    ))
+  rescue => e
+    @logger&.info "SelfAgencyBridge: retry failed for #{esc.call_id} — #{e.message}"
   end
 end

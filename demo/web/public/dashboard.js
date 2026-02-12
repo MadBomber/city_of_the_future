@@ -112,6 +112,9 @@
       case "method_gen_failed":
         addEventLine(evt.timestamp, "method", "Generation failed: " + evt.data.method);
         break;
+      case "adaptation_success":
+        handleAdaptationSuccess(evt);
+        break;
       case "governance_event":
         handleGovernanceEvent(evt);
         break;
@@ -217,6 +220,17 @@
     setText("gen-count", genCount);
   }
 
+  function handleAdaptationSuccess(evt) {
+    var d = evt.data;
+    if (calls[d.call_id]) {
+      calls[d.call_id].status = "adapted";
+      calls[d.call_id].department = d.target_class;
+    }
+    addEventLine(evt.timestamp, "governance", "ADAPTED: " + d.call_id + " via " + d.target_class + "#" + d.method);
+    renderCalls();
+    updateMapMarker(d.call_id, "#44ffaa");
+  }
+
   function handleGovernanceEvent(evt) {
     var d = evt.data;
     var tag = d.decision === "approved" || d.decision === ":approved" ? "governance" : "escalation";
@@ -247,6 +261,7 @@
   }
 
   function statusClass(call) {
+    if (call.status === "adapted") return "adapted";
     if (call.status === "escalated") return "escalated";
     if (call.status === "resolved") return "resolved";
     if (!call.department) return "unknown";

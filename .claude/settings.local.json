@@ -17,7 +17,13 @@
       "Bash(bundle install:*)",
       "Bash(bundle exec ruby:*)",
       "Bash(/Users/dewayne/.claude/plugins/cache/ruby-skills/ruby-skills/0.5.0/skills/ruby-version-manager/detect.sh)",
-      "Bash(gem which:*)"
+      "Bash(gem which:*)",
+      "mcp__plugin_compound-engineering_context7__resolve-library-id",
+      "mcp__plugin_compound-engineering_context7__query-docs",
+      "Bash(bundle exec rake:*)",
+      "Bash(chmod:*)",
+      "WebFetch(domain:www.rubydoc.info)",
+      "Bash(say:*)"
     ]
   }
 }

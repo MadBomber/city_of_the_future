@@ -5,6 +5,7 @@ require "robot_lab"
 require "chaos_to_the_rescue"
 require "typed_bus"
 require "lumberjack"
+require_relative "messages"
 
 class Department
   include SelfAgency
@@ -17,6 +18,13 @@ class Department
 
   class << self
     attr_accessor :shared_bus, :shared_logger
+
+    def attach(bus)
+      require_relative "bus_setup"
+      BusSetup.configure(bus)
+      self.shared_bus = bus
+      bus
+    end
 
     def inherited(subclass)
       super
@@ -133,6 +141,37 @@ class Department
 
   def listen(channel_name, &block)
     shared_bus.subscribe(channel_name, &block)
+  end
+
+  def broadcast_incident(call_id:, incident:, details:, severity: :normal)
+    broadcast(:incidents, IncidentReport.new(
+      call_id:   call_id,
+      department: @name,
+      incident:  incident,
+      details:   details,
+      severity:  severity,
+      timestamp: Time.now
+    ))
+  end
+
+  def broadcast_dispatch_result(call_id:, method:, result:, was_new:, elapsed:)
+    broadcast(:dispatch_results, DispatchResult.new(
+      call_id:    call_id,
+      department: @name,
+      method:     method,
+      result:     result,
+      was_new:    was_new,
+      elapsed:    elapsed
+    ))
+  end
+
+  def broadcast_method_generated(method_name:, scope:, source_lines:)
+    broadcast(:method_generated, MethodGenerated.new(
+      department:   @name,
+      method_name:  method_name,
+      scope:        scope,
+      source_lines: source_lines
+    ))
   end
 
   # -- Internal department bus --

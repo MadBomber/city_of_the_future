@@ -6,6 +6,7 @@ gem "typed_bus"
 gem "self_agency"
 gem "robot_lab"
 gem "chaos_to_the_rescue"
+gem "vsm"
 
 gem "lumberjack"
 gem "minitest"

@@ -486,6 +486,12 @@ Async do
     LOG.info "[BUS] ResourceUpdate: #{msg.department} #{msg.resource_type} #{msg.available}/#{msg.total}"
     delivery.ack!
   end
+
+  Department.shared_bus.subscribe(:memo) do |delivery|
+    msg = delivery.message
+    LOG.info "[BUS] Memo: from=#{msg.from} to=#{msg.to} body=#{msg.body[0, 100]}"
+    delivery.ack!
+  end
 end
 
 # ---------------------------------------------------------------
@@ -673,6 +679,113 @@ if run_phase?(5)
   PHASE
 
   comms = CommsRobot.new(bus: Department.shared_bus)
+  comms.watch!
+
+  # --- 5a: City Council sends a memo about budget review ---
+
+  puts <<~MEMO_HEADER
+    #{THIN_SEP}
+      City Council Memo: Annual Budget Review
+    #{THIN_SEP}
+  MEMO_HEADER
+
+  memo = Memo.new(
+    from: "City Council",
+    to:   "all",
+    body: "The annual budget review is approaching. All departments " \
+          "must submit their budget requests for the upcoming fiscal year. " \
+          "Requests are due by end of month."
+  )
+  Async do
+    Department.shared_bus.publish(:memo, memo)
+  end
+  puts "  Published Memo on :memo"
+  ap memo.to_h
+  puts
+
+  # --- 5b: City Council designs the BudgetRequest message ---
+
+  puts <<~DESIGN_HEADER
+    #{THIN_SEP}
+      City Council: Designing BudgetRequest message format
+      The LLM will decide which fields a budget request needs.
+    #{THIN_SEP}
+  DESIGN_HEADER
+
+  budget_msg_path = File.join(__dir__, "..", "messages", "budget_request.rb")
+
+  council = RobotLab.build(
+    name: "city_council",
+    system_prompt: <<~PROMPT
+      You are the City Council budget committee. You design message formats
+      for city departments to use when submitting budget requests.
+
+      You must output ONLY a Ruby class definition — no explanation, no markdown fences.
+
+      Follow this exact pattern:
+
+      # frozen_string_literal: true
+
+      # One or two lines describing when this message is published.
+      class BudgetRequest < Message
+        attribute :field_name, Types::Coercible::String.default("") # description
+      end
+
+      RULES:
+      - The class MUST be named BudgetRequest and inherit from Message.
+      - Use Dry::Struct attribute syntax exactly as shown.
+      - Available types: Types::Coercible::String, Types::Coercible::Integer,
+        Types::Coercible::Float, Types::Coercible::Symbol, Types::Params::Bool.
+      - Use .default(...) for sensible defaults on every field.
+      - Add an inline # comment describing each field.
+      - Include fields appropriate for a department budget request:
+        think about what a budget submission needs (department name,
+        fiscal year, amounts, justification, categories, etc.)
+      - Output ONLY the Ruby code. No markdown, no explanation.
+    PROMPT
+  )
+
+  result = council.run(
+    message: "Design a BudgetRequest message class for city departments " \
+             "to submit their annual budget requests. Include fields that " \
+             "capture everything the council needs to review a budget submission."
+  )
+
+  generated_code = result.last_text_content.to_s
+                        .gsub(/```\w*\n?/, "").strip
+
+  puts "  LLM generated BudgetRequest class:"
+  puts generated_code.lines.map { |l| "    #{l}" }.join
+  puts
+
+  File.write(budget_msg_path, generated_code + "\n")
+  puts "  Wrote #{budget_msg_path}"
+
+  # Load the new class, register its channel, and refresh CommsRobot
+  load budget_msg_path
+  if Object.const_defined?(:BudgetRequest)
+    channel_name = BudgetRequest.channel
+    unless Department.shared_bus.channel?(channel_name)
+      Department.shared_bus.add_channel(channel_name, type: BudgetRequest)
+    end
+
+    Async do
+      Department.shared_bus.subscribe(channel_name) do |delivery|
+        msg = delivery.message
+        LOG.info "[BUS] BudgetRequest: #{msg.to_h}"
+        delivery.ack!
+      end
+    end
+
+    comms.refresh_catalog!
+    puts "  Registered channel :#{channel_name} and refreshed CommsRobot"
+    puts "  CommsRobot now knows: #{comms.catalog.keys.join(', ')}"
+  else
+    puts "  WARNING: BudgetRequest class not defined after loading generated code"
+  end
+  puts
+
+  # --- 5c: CommsRobot relays scenarios (including a budget request) ---
 
   comms_scenarios = [
     "There's a massive structure fire at the old warehouse on 7th and Broadway. " \
@@ -685,6 +798,10 @@ if run_phase?(5)
     "EMS department just finished handling cardiac arrest, call number 42. " \
     "The handler method was handle_cardiac_arrest and it took 3.5 seconds. " \
     "The method was newly generated on the fly.",
+
+    "The Fire Department is submitting their budget request for fiscal year 2027. " \
+    "They are requesting $4,500,000 for operations, citing the need for two new " \
+    "engine companies and upgraded protective equipment for all personnel.",
   ]
 
   comms_scenarios.each_with_index do |scenario, index|
@@ -709,6 +826,8 @@ if run_phase?(5)
     LOG.error "CommsRobot relay ##{index + 1}: #{e.class} - #{e.message}"
     puts "  Error: #{e.message}"
   end
+
+  comms.unwatch!
 end
 
 # ---------------------------------------------------------------

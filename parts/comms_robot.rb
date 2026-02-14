@@ -65,7 +65,11 @@ class CommsRobot
   def watch!
     @listener&.stop
     @listener = Listen.to(@messages_dir, only: /\.rb$/) do |modified, added, _removed|
-      (modified + added).each { |f| load f }
+      (modified + added).each do |f|
+        load f
+      rescue Dry::Struct::RepeatedAttributeError
+        # Class already loaded with these attributes — skip
+      end
       register_new_channels!
       refresh_catalog!
     end

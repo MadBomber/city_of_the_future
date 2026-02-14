@@ -174,6 +174,42 @@ class Department
     ))
   end
 
+  # -- Admin channel subscription --
+
+  def subscribe_to_admin!
+    shared_bus.subscribe(:admin) do |delivery|
+      msg = delivery.message
+      if msg.to.downcase == "all" || msg.to.downcase == @name.downcase
+        logger.info "#{@name} received admin directive from #{msg.from}: #{msg.body[0, 100]}"
+        handle_admin(msg)
+      end
+      delivery.ack!
+    end
+  end
+
+  def handle_admin(admin_msg)
+    coordinator = robot(:coordinator)
+    unless coordinator
+      logger.warn "#{@name} has no coordinator robot to handle admin directive"
+      return
+    end
+
+    result = coordinator.run(message: <<~PROMPT)
+      You have received an administrative directive from #{admin_msg.from}.
+
+      Directive: #{admin_msg.body}
+
+      As the #{@name} coordinator, determine what actions are needed to comply
+      with this directive. Describe what you will do, then do it.
+      Be concise — respond in 2-3 sentences.
+    PROMPT
+
+    response = result.last_text_content.to_s
+    puts "  [#{@name}] Admin response: #{response}"
+    logger.info "#{@name} admin response: #{response[0, 200]}"
+    response
+  end
+
   # -- Internal department bus --
 
   def add_channel(channel_name, **options)

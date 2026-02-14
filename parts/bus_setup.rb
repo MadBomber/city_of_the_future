@@ -9,7 +9,7 @@ module BusSetup
     MutualAidRequest,
     ResourceUpdate,
     MethodGenerated,
-    Memo,
+    Admin,
   ].freeze
 
   CHANNELS = MESSAGE_CLASSES.each_with_object({}) { |klass, h|

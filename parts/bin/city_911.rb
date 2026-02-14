@@ -355,6 +355,9 @@ class City911Center
                      "and coordinate with other departments."
     )
 
+    # Subscribe to admin channel so the department acts on directives
+    dept.subscribe_to_admin!
+
     puts <<~BANNER
 
       #{SEPARATOR}
@@ -487,9 +490,9 @@ Async do
     delivery.ack!
   end
 
-  Department.shared_bus.subscribe(:memo) do |delivery|
+  Department.shared_bus.subscribe(:admin) do |delivery|
     msg = delivery.message
-    LOG.info "[BUS] Memo: from=#{msg.from} to=#{msg.to} body=#{msg.body[0, 100]}"
+    LOG.info "[BUS] Admin: from=#{msg.from} to=#{msg.to} body=#{msg.body[0, 100]}"
     delivery.ack!
   end
 end
@@ -681,26 +684,35 @@ if run_phase?(5)
   comms = CommsRobot.new(bus: Department.shared_bus)
   comms.watch!
 
-  # --- 5a: City Council sends a memo about budget review ---
+  # Ensure departments exist so they can receive admin directives
+  if center.departments.empty?
+    [:fire, :police, :ems].each { |type| center.send(:find_or_create_department, type) }
+  end
 
-  puts <<~MEMO_HEADER
-    #{THIN_SEP}
-      City Council Memo: Annual Budget Review
-    #{THIN_SEP}
-  MEMO_HEADER
+  # --- 5a: City Council sends admin directive about budget review ---
 
-  memo = Memo.new(
+  puts <<~ADMIN_HEADER
+    #{THIN_SEP}
+      City Council Admin Directive: Annual Budget Review
+    #{THIN_SEP}
+  ADMIN_HEADER
+
+  directive = Admin.new(
     from: "City Council",
     to:   "all",
     body: "The annual budget review is approaching. All departments " \
           "must submit their budget requests for the upcoming fiscal year. " \
           "Requests are due by end of month."
   )
+
+  puts "  Publishing Admin on :admin (to: all)"
+  ap directive.to_h
+  puts
+
+  puts "  Waiting for department responses..."
   Async do
-    Department.shared_bus.publish(:memo, memo)
+    Department.shared_bus.publish(:admin, directive)
   end
-  puts "  Published Memo on :memo"
-  ap memo.to_h
   puts
 
   # --- 5b: City Council designs the BudgetRequest message ---
@@ -713,6 +725,8 @@ if run_phase?(5)
   DESIGN_HEADER
 
   budget_msg_path = File.join(__dir__, "..", "messages", "budget_request.rb")
+  File.delete(budget_msg_path) if File.exist?(budget_msg_path)
+  Object.send(:remove_const, :BudgetRequest) if Object.const_defined?(:BudgetRequest)
 
   council = RobotLab.build(
     name: "city_council",
@@ -814,7 +828,8 @@ if run_phase?(5)
 
     published = comms.relay(scenario)
     if published.empty?
-      puts "  No messages published (LLM may not have returned valid JSON)"
+      puts "  No messages published."
+      puts "  LLM raw response: #{comms.last_raw_response[0, 300]}"
     else
       published.each do |pub|
         puts "  Published #{pub[:type]} on :#{pub[:channel]}"
@@ -824,7 +839,7 @@ if run_phase?(5)
     puts
   rescue => e
     LOG.error "CommsRobot relay ##{index + 1}: #{e.class} - #{e.message}"
-    puts "  Error: #{e.message}"
+    puts "  Error: #{e.class} - #{e.message}"
   end
 
   comms.unwatch!

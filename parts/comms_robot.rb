@@ -35,16 +35,21 @@ class CommsRobot
   # Returns an array of hashes describing what was published.
   def relay(info_string)
     result = @robot.run(message: info_string)
-    raw_text = result.last_text_content.to_s
+    @last_raw_response = result.last_text_content.to_s
 
-    messages_json = extract_json(raw_text)
+    messages_json = extract_json(@last_raw_response)
     return [] if messages_json.empty?
 
     published = []
     messages_json.each do |msg_spec|
       channel_name = msg_spec["channel"]&.to_sym
       entry = @catalog[channel_name]
-      next unless entry
+
+      unless entry
+        puts "  WARNING: LLM returned unknown channel :#{channel_name} " \
+             "(known: #{@catalog.keys.join(', ')})"
+        next
+      end
 
       fields = msg_spec["fields"] || {}
       kwargs = clean_fields(entry, fields)
@@ -58,6 +63,9 @@ class CommsRobot
 
     published
   end
+
+  # The raw text the LLM returned on the last relay call.
+  attr_reader :last_raw_response
 
   # Start watching the messages/ directory for file changes.
   # When files are added or modified, reload them and rebuild
@@ -218,6 +226,9 @@ class CommsRobot
 
       - "method_generated" — ONLY for reports about new code methods being created.
         Keywords: learned, generated method, new capability, source lines.
+
+      - "admin" — ONLY for directives, memos, or announcements from leadership.
+        Keywords: directive, memo, announcement, policy, budget, compliance, notice.
 
       Available message schemas:
 

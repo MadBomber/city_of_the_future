@@ -144,7 +144,7 @@ class Department
   end
 
   def broadcast_incident(call_id:, incident:, details:, severity: :normal)
-    broadcast(:incidents, IncidentReport.new(
+    broadcast(:incident_report, IncidentReport.new(
       call_id:   call_id,
       department: @name,
       incident:  incident,
@@ -155,7 +155,7 @@ class Department
   end
 
   def broadcast_dispatch_result(call_id:, handler:, result:, was_new:, elapsed:)
-    broadcast(:dispatch_results, DispatchResult.new(
+    broadcast(:dispatch_result, DispatchResult.new(
       call_id:    call_id,
       department: @name,
       handler:    handler,

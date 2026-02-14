@@ -2,6 +2,7 @@
 
 require "async"
 require "json"
+require "listen"
 require "robot_lab"
 require_relative "bus_setup"
 
@@ -13,12 +14,17 @@ require_relative "bus_setup"
 # Uses a JSON-response approach rather than tool/function calling,
 # so it works with any LLM model regardless of tool support.
 # Type coercion and defaults are handled by Dry::Struct.
+#
+# Watches the messages/ directory for changes. When a message file
+# is added or modified, the catalog and robot are rebuilt automatically.
 class CommsRobot
   attr_reader :catalog, :robot, :bus
 
   def initialize(bus:)
     @bus = bus
     @catalog = {}
+    @listener = nil
+    @messages_dir = File.join(__dir__, "messages")
     build_catalog!
     @robot = build_robot
   end
@@ -53,7 +59,26 @@ class CommsRobot
     published
   end
 
-  # Rebuild the schema catalog and robot when new message types appear.
+  # Start watching the messages/ directory for file changes.
+  # When files are added or modified, reload them and rebuild
+  # the catalog and robot automatically.
+  def watch!
+    @listener&.stop
+    @listener = Listen.to(@messages_dir, only: /\.rb$/) do |modified, added, _removed|
+      (modified + added).each { |f| load f }
+      register_new_channels!
+      refresh_catalog!
+    end
+    @listener.start
+  end
+
+  # Stop watching the messages/ directory.
+  def unwatch!
+    @listener&.stop
+    @listener = nil
+  end
+
+  # Rebuild the schema catalog and robot from current Message subclasses.
   def refresh_catalog!
     @catalog = {}
     build_catalog!
@@ -63,12 +88,12 @@ class CommsRobot
   private
 
   # -------------------------------------------------------------------
-  # Catalog Discovery
+  # Catalog Discovery — scans all Message subclasses
   # -------------------------------------------------------------------
 
   def build_catalog!
-    BusSetup::CHANNELS.each do |channel_name, opts|
-      klass = opts[:type]
+    discover_message_classes.each do |klass|
+      channel_name = klass.channel
       comments = parse_source_comments(klass)
 
       @catalog[channel_name] = {
@@ -77,6 +102,21 @@ class CommsRobot
         class_description: comments[:header],
         field_info:        comments[:fields]
       }
+    end
+  end
+
+  # Find all concrete Message subclasses (those with a name).
+  def discover_message_classes
+    ObjectSpace.each_object(Class).select do |klass|
+      klass < Message && klass.name
+    end
+  end
+
+  # Register bus channels for any Message subclasses not yet on the bus.
+  def register_new_channels!
+    discover_message_classes.each do |klass|
+      channel_name = klass.channel
+      @bus.add_channel(channel_name, type: klass) unless @bus.channel?(channel_name)
     end
   end
 
@@ -121,7 +161,7 @@ class CommsRobot
                     .gsub(/([A-Z]+)([A-Z][a-z])/, '\1_\2')
                     .gsub(/([a-z\d])([A-Z])/, '\1_\2')
                     .downcase + ".rb"
-    File.join(__dir__, "messages", filename)
+    File.join(@messages_dir, filename)
   end
 
   # -------------------------------------------------------------------
@@ -160,16 +200,16 @@ class CommsRobot
 
       CHANNEL ROUTING RULES (use these to pick the right channel):
 
-      - "incidents" — ONLY for new 911 calls or emergencies being reported.
+      - "incident_report" — ONLY for new 911 calls or emergencies being reported.
         Keywords: fire, accident, crime, medical emergency, hazmat, etc.
 
-      - "dispatch_results" — ONLY for reports about a COMPLETED dispatch.
+      - "dispatch_result" — ONLY for reports about a COMPLETED dispatch.
         Keywords: finished handling, completed, took N seconds, elapsed, result.
 
-      - "mutual_aid" — ONLY for requests where a department needs help from others.
+      - "mutual_aid_request" — ONLY for requests where a department needs help from others.
         Keywords: overwhelmed, needs help, requesting assistance, all available units.
 
-      - "resources" — ONLY for status updates about department capacity/availability.
+      - "resource_update" — ONLY for status updates about department capacity/availability.
         Keywords: N available, N total, on duty, units available, resource count.
 
       - "method_generated" — ONLY for reports about new code methods being created.
@@ -185,16 +225,16 @@ class CommsRobot
       EXAMPLES:
 
       Input: "There is a fire at 123 Main St, call ID 7"
-      Response: [{"channel": "incidents", "fields": {"call_id": 7, "department": "Fire Department", "incident": "structure_fire", "details": "Fire at 123 Main St", "severity": "normal", "timestamp": ""}}]
+      Response: [{"channel": "incident_report", "fields": {"call_id": 7, "department": "Fire Department", "incident": "structure_fire", "details": "Fire at 123 Main St", "severity": "normal", "timestamp": ""}}]
 
       Input: "Police department has 15 officers available out of 20 total"
-      Response: [{"channel": "resources", "fields": {"department": "Police Department", "resource_type": "officers", "available": 15, "total": 20}}]
+      Response: [{"channel": "resource_update", "fields": {"department": "Police Department", "resource_type": "officers", "available": 15, "total": 20}}]
 
       Input: "EMS finished call 42, method handle_cardiac_arrest took 3.5 seconds, was newly generated"
-      Response: [{"channel": "dispatch_results", "fields": {"call_id": 42, "department": "EMS Department", "method": "handle_cardiac_arrest", "result": "completed", "was_new": true, "elapsed": 3.5}}]
+      Response: [{"channel": "dispatch_result", "fields": {"call_id": 42, "department": "EMS Department", "handler": "handle_cardiac_arrest", "result": "completed", "was_new": true, "elapsed": 3.5}}]
 
       Input: "Fire department is overwhelmed and needs help from all departments"
-      Response: [{"channel": "mutual_aid", "fields": {"from_department": "Fire Department", "description": "Needs help from all departments", "priority": "critical", "call_id": 0}}]
+      Response: [{"channel": "mutual_aid_request", "fields": {"from_department": "Fire Department", "description": "Needs help from all departments", "priority": "critical", "call_id": 0}}]
 
       RULES:
       - CAREFULLY match the input to the correct channel using the routing rules above.
@@ -244,7 +284,6 @@ class CommsRobot
   # -------------------------------------------------------------------
 
   # Strip empty/nil values so Dry::Struct defaults kick in.
-  # Symbolize keys to match attribute names.
   def clean_fields(entry, fields)
     kwargs = {}
     entry[:members].each do |member|

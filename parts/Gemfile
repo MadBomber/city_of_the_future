@@ -9,6 +9,7 @@ gem "chaos_to_the_rescue"
 gem "vsm"
 
 gem "dry-struct"
+gem "listen"
 gem "lumberjack"
 gem "minitest"
 # gem "ruby_llm"

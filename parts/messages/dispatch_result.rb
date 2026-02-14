@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Published on the :dispatch_results channel after a department
+# Published on the :dispatch_result channel after a department
 # handler finishes processing an emergency. Use this to monitor
 # handler performance, track newly generated methods, and log
 # completed dispatches.

@@ -24,7 +24,7 @@ class TestBusSetup < Minitest::Test
   def test_configure_is_idempotent
     BusSetup.configure(@bus)
     BusSetup.configure(@bus)
-    assert @bus.channel?(:incidents)
+    assert @bus.channel?(:incident_report)
   end
 
   def test_channels_hash_is_frozen
@@ -36,7 +36,7 @@ class TestBusSetup < Minitest::Test
     received = nil
 
     Async do
-      @bus.subscribe(:incidents) do |delivery|
+      @bus.subscribe(:incident_report) do |delivery|
         received = delivery.message
         delivery.ack!
       end
@@ -45,7 +45,7 @@ class TestBusSetup < Minitest::Test
         call_id: 1, department: "Fire", incident: :blaze,
         details: "test", severity: :normal, timestamp: Time.now
       )
-      @bus.publish(:incidents, msg)
+      @bus.publish(:incident_report, msg)
     end
 
     assert_instance_of IncidentReport, received
@@ -57,7 +57,7 @@ class TestBusSetup < Minitest::Test
 
     error = nil
     Async do
-      @bus.publish(:incidents, "not an IncidentReport")
+      @bus.publish(:incident_report, "not an IncidentReport")
     rescue ArgumentError => e
       error = e
     end
@@ -71,7 +71,7 @@ class TestBusSetup < Minitest::Test
     received = nil
 
     Async do
-      @bus.subscribe(:mutual_aid) do |delivery|
+      @bus.subscribe(:mutual_aid_request) do |delivery|
         received = delivery.message
         delivery.ack!
       end
@@ -80,7 +80,7 @@ class TestBusSetup < Minitest::Test
         from_department: "Fire", description: "help",
         priority: :high, call_id: 5
       )
-      @bus.publish(:mutual_aid, msg)
+      @bus.publish(:mutual_aid_request, msg)
     end
 
     assert_instance_of MutualAidRequest, received

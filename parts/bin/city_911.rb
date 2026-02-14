@@ -457,13 +457,13 @@ center = City911Center.new
 
 # Subscribe to typed channels for logging (always active)
 Async do
-  Department.shared_bus.subscribe(:incidents) do |delivery|
+  Department.shared_bus.subscribe(:incident_report) do |delivery|
     msg = delivery.message
     LOG.info "[BUS] IncidentReport: #{msg.department} / #{msg.incident} (severity: #{msg.severity})"
     delivery.ack!
   end
 
-  Department.shared_bus.subscribe(:dispatch_results) do |delivery|
+  Department.shared_bus.subscribe(:dispatch_result) do |delivery|
     msg = delivery.message
     LOG.info "[BUS] DispatchResult: #{msg.department} / #{msg.handler} (#{msg.elapsed}s, new: #{msg.was_new})"
     delivery.ack!
@@ -475,13 +475,13 @@ Async do
     delivery.ack!
   end
 
-  Department.shared_bus.subscribe(:mutual_aid) do |delivery|
+  Department.shared_bus.subscribe(:mutual_aid_request) do |delivery|
     msg = delivery.message
     LOG.info "[BUS] MutualAidRequest: #{msg.from_department} requests help (priority: #{msg.priority}, call: #{msg.call_id})"
     delivery.ack!
   end
 
-  Department.shared_bus.subscribe(:resources) do |delivery|
+  Department.shared_bus.subscribe(:resource_update) do |delivery|
     msg = delivery.message
     LOG.info "[BUS] ResourceUpdate: #{msg.department} #{msg.resource_type} #{msg.available}/#{msg.total}"
     delivery.ack!

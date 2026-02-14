@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Published on the :mutual_aid channel when a department needs
+# Published on the :mutual_aid_request channel when a department needs
 # assistance from other departments. Subscribers receive this
 # to decide whether they can contribute resources to help with
 # a large-scale or multi-department incident.

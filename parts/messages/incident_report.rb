@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Published on the :incidents channel when a 911 call is received
+# Published on the :incident_report channel when a 911 call is received
 # and dispatched to a department. Allows bus subscribers to track
 # incoming emergencies in real time before a handler runs.
 class IncidentReport < Message

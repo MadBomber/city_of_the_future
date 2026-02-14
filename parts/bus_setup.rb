@@ -3,12 +3,16 @@
 require_relative "messages"
 
 module BusSetup
-  CHANNELS = {
-    incidents:        { type: IncidentReport },
-    dispatch_results: { type: DispatchResult },
-    mutual_aid:       { type: MutualAidRequest },
-    resources:        { type: ResourceUpdate },
-    method_generated: { type: MethodGenerated },
+  MESSAGE_CLASSES = [
+    IncidentReport,
+    DispatchResult,
+    MutualAidRequest,
+    ResourceUpdate,
+    MethodGenerated,
+  ].freeze
+
+  CHANNELS = MESSAGE_CLASSES.each_with_object({}) { |klass, h|
+    h[klass.channel] = { type: klass }
   }.freeze
 
   def self.configure(bus)

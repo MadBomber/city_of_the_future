@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Published on the :resource_updates channel when a department's
+# Published on the :resource_update channel when a department's
 # resource availability changes. Use this to maintain a city-wide
 # view of capacity so dispatch decisions can account for which
 # departments have units available.

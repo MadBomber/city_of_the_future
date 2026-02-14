@@ -20,9 +20,11 @@ require_relative "../bus_setup"
 require_relative "../tools/dispatch_tool"
 require_relative "../tools/resource_query_tool"
 require "vsm"
+require "amazing_print"
+require "lumberjack"
+require_relative "../comms_robot"
 
-require "debug_me"
-include DebugMe
+LOG = Lumberjack::Logger.new("city_911.log", level: :info)
 
 SEPARATOR    = "=" * 60
 THIN_SEP     = "-" * 60
@@ -160,13 +162,13 @@ class City911Center
     result = dept.public_send(method, emergency[:details])
     elapsed = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start).round(2)
 
-    debug_me "  Completed in #{elapsed}s"
+    puts "  Completed in #{elapsed}s"
 
     # Publish typed DispatchResult on the shared bus
     Async do
       dept.broadcast_dispatch_result(
         call_id: call_id,
-        method:  method,
+        handler: method,
         result:  result.to_s[0, 200],
         was_new: !already_known,
         elapsed: elapsed
@@ -192,14 +194,17 @@ class City911Center
 
     result
   rescue => e
-    debug_me "  ERROR dispatching #{emergency[:incident]}: #{e.class} - #{e.message}"
+    LOG.error "Dispatching #{emergency[:incident]}: #{e.class} - #{e.message}"
     nil
   end
 
   def robot_analyze(emergency)
     dept = find_or_create_department(emergency[:dept])
     robot = dept.robot(:coordinator)
-    return debug_me("  No coordinator robot for #{dept.name}") unless robot
+    unless robot
+      LOG.warn "No coordinator robot for #{dept.name}"
+      return
+    end
 
     puts <<~BANNER
       #{THIN_SEP}
@@ -225,10 +230,10 @@ class City911Center
     elapsed = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start).round(2)
 
     text = result.last_text_content
-    debug_me "  Robot analysis (#{elapsed}s):\n#{text}"
+    LOG.info "Robot analysis (#{elapsed}s): #{text}"
     text
   rescue => e
-    debug_me "  ERROR in robot analysis: #{e.class} - #{e.message}"
+    LOG.error "Robot analysis: #{e.class} - #{e.message}"
     nil
   end
 
@@ -236,7 +241,10 @@ class City911Center
     dept = find_or_create_department(emergency[:dept])
 
     classifier = dept.robot(:coordinator)
-    return debug_me("  No coordinator robot for triage") unless classifier
+    unless classifier
+      LOG.warn "No coordinator robot for triage"
+      return
+    end
 
     # Build a triage network with classify -> recommend pipeline
     triage = dept.create_network(:triage) do
@@ -259,10 +267,10 @@ class City911Center
     elapsed = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start).round(2)
 
     text = result.value&.last_text_content
-    debug_me "  Triage result (#{elapsed}s):\n#{text}"
+    LOG.info "Triage result (#{elapsed}s): #{text}"
     text
   rescue => e
-    debug_me "  ERROR in triage network: #{e.class} - #{e.message}"
+    LOG.error "Triage network: #{e.class} - #{e.message}"
     nil
   end
 
@@ -292,7 +300,10 @@ class City911Center
 
   def demonstrate_self_agency(dept_type, description)
     dept = @departments[dept_type]
-    return debug_me("  No #{dept_type} department exists yet") unless dept
+    unless dept
+      LOG.warn "No #{dept_type} department exists yet"
+      return
+    end
 
     puts <<~BANNER
       #{THIN_SEP}
@@ -305,7 +316,7 @@ class City911Center
     methods = dept._(description)
     elapsed = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start).round(2)
 
-    debug_me "  Learned #{methods.inspect} in #{elapsed}s"
+    puts "  Learned #{methods.inspect} in #{elapsed}s"
 
     # Publish MethodGenerated for each new method
     Array(methods).each do |m|
@@ -321,7 +332,7 @@ class City911Center
 
     methods
   rescue => e
-    debug_me "  ERROR in self_agency: #{e.class} - #{e.message}"
+    LOG.error "Self-agency: #{e.class} - #{e.message}"
     nil
   end
 
@@ -363,6 +374,67 @@ class City911Center
 end
 
 # ---------------------------------------------------------------
+# Phase Selection
+# Usage:
+#   bin/city_911.rb              # all phases (1-6)
+#   bin/city_911.rb 5            # just phase 5
+#   bin/city_911.rb 1 3 5        # phases 1, 3, and 5
+#   bin/city_911.rb 1-3          # phases 1 through 3
+#   bin/city_911.rb 2-4 6        # phases 2, 3, 4, and 6
+#
+# NOTE: Phases 2-6 depend on phase 1 to create departments.
+#       If you skip phase 1, those phases may have no departments
+#       to work with.
+# ---------------------------------------------------------------
+
+ALL_PHASES = (1..6).to_a.freeze
+
+def parse_phases(args)
+  return ALL_PHASES if args.empty?
+
+  if args.include?("--help") || args.include?("-h")
+    puts <<~USAGE
+      Usage: #{$PROGRAM_NAME} [PHASES...]
+
+      Run one or more phases of the City 911 dispatch demo.
+
+      Examples:
+        #{$PROGRAM_NAME}           # all phases (1-6)
+        #{$PROGRAM_NAME} 5         # just phase 5
+        #{$PROGRAM_NAME} 1 3 5     # phases 1, 3, and 5
+        #{$PROGRAM_NAME} 1-3       # phases 1 through 3
+        #{$PROGRAM_NAME} 2-4 6     # phases 2, 3, 4, and 6
+
+      Phases:
+        1  Reactive Dispatch      (chaos_to_the_rescue)
+        2  Robot Analysis         (robot_lab)
+        3  Self-Agency Learning   (self_agency)
+        4  VSM-Driven Dispatch    (vsm)
+        5  CommsRobot             (natural language to typed messages)
+        6  Save Department Files
+    USAGE
+    exit 0
+  end
+
+  phases = []
+  args.each do |arg|
+    if arg.include?("-")
+      lo, hi = arg.split("-").map(&:to_i)
+      phases.concat((lo..hi).to_a)
+    else
+      phases << arg.to_i
+    end
+  end
+  phases.uniq.sort
+end
+
+ACTIVE_PHASES = parse_phases(ARGV)
+
+def run_phase?(n)
+  ACTIVE_PHASES.include?(n)
+end
+
+# ---------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------
 
@@ -375,6 +447,7 @@ puts <<~HEADER
     LLM Provider: #{LLM_PROVIDER}
     LLM Model:    #{LLM_MODEL}
     Emergencies:  #{EMERGENCIES.size}
+    Phases:       #{ACTIVE_PHASES.join(", ")}
 
     Typed Bus Channels: #{BusSetup::CHANNELS.keys.join(", ")}
 
@@ -382,256 +455,296 @@ HEADER
 
 center = City911Center.new
 
-# ---------------------------------------------------------------
-# Phase 1: Reactive Dispatch via chaos_to_the_rescue
-# Departments and handler methods are created on demand.
-# Typed IncidentReport and DispatchResult messages flow on the bus.
-# ---------------------------------------------------------------
-
-debug_me "PHASE 1: Incoming 911 Calls (Reactive Dispatch)"
-debug_me "Departments and methods will be created as needed."
-debug_me "Typed messages (IncidentReport, DispatchResult) publish on the shared bus.\n"
-
-# Subscribe to typed channels to show messages flowing
-incident_sub = nil
-dispatch_sub = nil
-
+# Subscribe to typed channels for logging (always active)
 Async do
-  incident_sub = Department.shared_bus.subscribe(:incidents) do |delivery|
+  Department.shared_bus.subscribe(:incidents) do |delivery|
     msg = delivery.message
-    debug_me "  [BUS] IncidentReport: #{msg.department} / #{msg.incident} (severity: #{msg.severity})"
+    LOG.info "[BUS] IncidentReport: #{msg.department} / #{msg.incident} (severity: #{msg.severity})"
     delivery.ack!
   end
 
-  dispatch_sub = Department.shared_bus.subscribe(:dispatch_results) do |delivery|
+  Department.shared_bus.subscribe(:dispatch_results) do |delivery|
     msg = delivery.message
-    debug_me "  [BUS] DispatchResult: #{msg.department} / #{msg.method} (#{msg.elapsed}s, new: #{msg.was_new})"
+    LOG.info "[BUS] DispatchResult: #{msg.department} / #{msg.handler} (#{msg.elapsed}s, new: #{msg.was_new})"
+    delivery.ack!
+  end
+
+  Department.shared_bus.subscribe(:method_generated) do |delivery|
+    msg = delivery.message
+    LOG.info "[BUS] MethodGenerated: #{msg.department} learned #{msg.method_name} (#{msg.source_lines} lines)"
+    delivery.ack!
+  end
+
+  Department.shared_bus.subscribe(:mutual_aid) do |delivery|
+    msg = delivery.message
+    LOG.info "[BUS] MutualAidRequest: #{msg.from_department} requests help (priority: #{msg.priority}, call: #{msg.call_id})"
+    delivery.ack!
+  end
+
+  Department.shared_bus.subscribe(:resources) do |delivery|
+    msg = delivery.message
+    LOG.info "[BUS] ResourceUpdate: #{msg.department} #{msg.resource_type} #{msg.available}/#{msg.total}"
     delivery.ack!
   end
 end
 
-EMERGENCIES.shuffle(random: Random.new(42)).each_with_index do |emergency, index|
-  puts <<~CALL
+# ---------------------------------------------------------------
+# Phase 1: Reactive Dispatch via chaos_to_the_rescue
+# ---------------------------------------------------------------
 
-    #{SEPARATOR}
-      911 CALL ##{index + 1} of #{EMERGENCIES.size}
-      Type: #{emergency[:incident].to_s.tr('_', ' ').upcase}
-    #{SEPARATOR}
-  CALL
+if run_phase?(1)
+  puts <<~PHASE
+    PHASE 1: Incoming 911 Calls (Reactive Dispatch)
+    Departments and methods will be created as needed.
+    Typed messages (IncidentReport, DispatchResult) publish on the shared bus.
 
-  center.dispatch(emergency)
+  PHASE
+
+  EMERGENCIES.shuffle(random: Random.new(42)).each_with_index do |emergency, index|
+    puts <<~CALL
+
+      #{SEPARATOR}
+        911 CALL ##{index + 1} of #{EMERGENCIES.size}
+        Type: #{emergency[:incident].to_s.tr('_', ' ').upcase}
+      #{SEPARATOR}
+    CALL
+
+    center.dispatch(emergency)
+  end
 end
 
 # ---------------------------------------------------------------
 # Phase 2: Robot Analysis
-# Use coordinator robot to analyze an incident before dispatch.
-# Demonstrates robot_lab.run() with meaningful prompts.
 # ---------------------------------------------------------------
 
-debug_me "\nPHASE 2: Robot Analysis"
-debug_me "Using coordinator robots to analyze incidents.\n"
+if run_phase?(2)
+  puts <<~PHASE
 
-center.robot_analyze(
-  { dept: :fire, incident: :structure_fire, details: "High-rise commercial building, 15 floors, smoke from 8th floor" }
-)
+    PHASE 2: Robot Analysis
+    Using coordinator robots to analyze incidents.
 
-# Run triage network for a complex multi-step analysis
-center.run_triage_network(
-  { dept: :police, incident: :hostage_situation, details: "Armed suspect barricaded in bank with 12 hostages" }
-)
+  PHASE
+
+  center.robot_analyze(
+    { dept: :fire, incident: :structure_fire, details: "High-rise commercial building, 15 floors, smoke from 8th floor" }
+  )
+
+  center.run_triage_network(
+    { dept: :police, incident: :hostage_situation, details: "Armed suspect barricaded in bank with 12 hostages" }
+  )
+end
 
 # ---------------------------------------------------------------
 # Phase 3: Self-Agency Learning
-# Departments deliberately acquire new capabilities.
-# Publishes MethodGenerated messages on typed channels.
 # ---------------------------------------------------------------
 
-debug_me "\nPHASE 3: Proactive Learning via Self-Agency"
-debug_me "Departments deliberately acquire new capabilities.\n"
+if run_phase?(3)
+  puts <<~PHASE
 
-method_sub = nil
-Async do
-  method_sub = Department.shared_bus.subscribe(:method_generated) do |delivery|
-    msg = delivery.message
-    debug_me "  [BUS] MethodGenerated: #{msg.department} learned #{msg.method_name} (#{msg.source_lines} lines)"
-    delivery.ack!
-  end
+    PHASE 3: Proactive Learning via Self-Agency
+    Departments deliberately acquire new capabilities.
+
+  PHASE
+
+  center.demonstrate_self_agency(
+    :fire,
+    "a method called resource_status that returns a Hash " \
+    "with keys :engines, :personnel, :water_supply each with an Integer value"
+  )
+
+  center.demonstrate_self_agency(
+    :ems,
+    "a method called triage_priority that accepts a description String " \
+    "and returns one of these symbols: :critical, :urgent, or :stable " \
+    "based on keywords in the description. " \
+    "Use only pure string matching logic with no IO, no shell calls, and no metaprogramming"
+  )
 end
-
-center.demonstrate_self_agency(
-  :fire,
-  "a method called resource_status that returns a Hash " \
-  "with keys :engines, :personnel, :water_supply each with an Integer value"
-)
-
-center.demonstrate_self_agency(
-  :ems,
-  "a method called triage_priority that accepts a description String " \
-  "and returns one of these symbols: :critical, :urgent, or :stable " \
-  "based on keywords in the description. " \
-  "Use only pure string matching logic with no IO, no shell calls, and no metaprogramming"
-)
 
 # ---------------------------------------------------------------
 # Phase 4: VSM-Driven Dispatch
-# Build a VSM Capsule wrapping the 911 center with ToolCapsules.
-# Shows Intelligence -> Operations -> ToolCapsule -> dispatch flow.
 # ---------------------------------------------------------------
 
-debug_me "\nPHASE 4: VSM-Driven Dispatch"
-debug_me "Building a Viable System Model capsule for structured dispatch.\n"
+if run_phase?(4)
+  puts <<~PHASE
 
-# Create an OpenAI-compatible driver for VSM Intelligence
-driver = VSM::Drivers::OpenAI::AsyncDriver.new(
-  api_key:  ENV["LLM_API_KEY"] || "ollama",
-  model:    LLM_MODEL,
-  base_url: LLM_API_BASE
-)
+    PHASE 4: VSM-Driven Dispatch
+    Building a Viable System Model capsule for structured dispatch.
 
-# Build tool capsule instances and inject dependencies
-dispatch_tool = DispatchTool.new
-dispatch_tool.center = center
+  PHASE
 
-resource_tool = ResourceQueryTool.new
-resource_tool.city_memory = CITY_MEMORY
+  driver = VSM::Drivers::OpenAI::AsyncDriver.new(
+    api_key:  ENV["LLM_API_KEY"] || "ollama",
+    model:    LLM_MODEL,
+    base_url: LLM_API_BASE
+  )
 
-# Build the VSM capsule
-vsm_capsule = VSM::DSL.define(:city_911) do
-  identity    klass: VSM::Identity, args: {
-    identity: "City 911 Emergency Dispatch",
-    invariants: ["All emergencies must be dispatched", "Prioritize life-threatening incidents"]
-  }
-  governance   klass: VSM::Governance
-  coordination klass: VSM::Coordination
-  intelligence klass: VSM::Intelligence, args: {
-    driver: driver,
-    system_prompt: "You are the City 911 Emergency Dispatch coordinator. " \
-                   "You have two tools: 'dispatch' to send emergencies to departments, " \
-                   "and 'query_resources' to check department availability. " \
-                   "When given an emergency, use the dispatch tool to handle it. " \
-                   "Respond briefly after dispatching."
-  }
-  operations do
-    capsule :dispatch,        klass: DispatchTool
-    capsule :query_resources, klass: ResourceQueryTool
-  end
-end
+  dispatch_tool = DispatchTool.new
+  dispatch_tool.center = center
 
-# Inject dependencies into the capsule's operation children
-vsm_capsule.children["dispatch"].center = center
-vsm_capsule.children["query_resources"].city_memory = CITY_MEMORY
+  resource_tool = ResourceQueryTool.new
+  resource_tool.city_memory = CITY_MEMORY
 
-puts <<~VSM_INFO
-  #{SEPARATOR}
-    VSM CAPSULE BUILT: #{vsm_capsule.name}
-    Roles:    #{vsm_capsule.roles.keys.join(", ")}
-    Tools:    #{vsm_capsule.children.keys.join(", ")}
-  #{SEPARATOR}
-
-VSM_INFO
-
-# Feed an emergency through the VSM capsule
-vsm_emergency = {
-  dept: :ems,
-  incident: :mass_casualty,
-  details: "Bus accident on Highway 5, approximately 20 injured passengers"
-}
-
-debug_me "Feeding emergency through VSM capsule: #{vsm_emergency[:incident]}"
-
-session_id = SecureRandom.uuid
-collected_output = []
-
-# Subscribe to capsule bus to collect output
-vsm_capsule.bus.subscribe do |msg|
-  case msg.kind
-  when :assistant
-    collected_output << msg.payload.to_s unless msg.payload.to_s.empty?
-    debug_me "  [VSM] Assistant: #{msg.payload.to_s[0, 200]}"
-  when :tool_call
-    debug_me "  [VSM] Tool call: #{msg.payload[:tool]}(#{msg.payload[:args]})"
-  when :tool_result
-    debug_me "  [VSM] Tool result: #{msg.payload.to_s[0, 200]}"
-  end
-end
-
-# Run the capsule with the emergency
-Async do |task|
-  vsm_capsule.bus.emit(VSM::Message.new(
-    kind: :user,
-    payload: "Emergency: #{vsm_emergency[:incident].to_s.tr('_', ' ')}. " \
-             "Department: #{vsm_emergency[:dept]}. " \
-             "Details: #{vsm_emergency[:details]}. " \
-             "Please dispatch this emergency.",
-    meta: { session_id: session_id }
-  ))
-
-  # Let the capsule process the message
-  capsule_task = vsm_capsule.run
-
-  # Give the async tasks time to complete, then stop the capsule loop
-  task.sleep(30)
-  capsule_task.stop
-rescue => e
-  debug_me "  VSM error: #{e.class} - #{e.message}"
-end
-
-# ---------------------------------------------------------------
-# Phase 5: Inter-Department Communication (Typed Messages)
-# Uses MutualAidRequest typed messages instead of raw Hash.
-# ---------------------------------------------------------------
-
-debug_me "\nPHASE 5: Inter-Department Communication"
-debug_me "Departments communicate via typed MutualAidRequest messages.\n"
-
-Async do
-  responders = []
-
-  center.departments.each do |type, dept|
-    id = dept.listen(:mutual_aid) do |delivery|
-      msg = delivery.message
-      debug_me "  #{dept.name} received mutual aid request from #{msg.from_department}: #{msg.description}"
-      delivery.ack!
+  vsm_capsule = VSM::DSL.define(:city_911) do
+    identity    klass: VSM::Identity, args: {
+      identity: "City 911 Emergency Dispatch",
+      invariants: ["All emergencies must be dispatched", "Prioritize life-threatening incidents"]
+    }
+    governance   klass: VSM::Governance
+    coordination klass: VSM::Coordination
+    intelligence klass: VSM::Intelligence, args: {
+      driver: driver,
+      system_prompt: "You are the City 911 Emergency Dispatch coordinator. " \
+                     "You have two tools: 'dispatch' to send emergencies to departments, " \
+                     "and 'query_resources' to check department availability. " \
+                     "When given an emergency, use the dispatch tool to handle it. " \
+                     "Respond briefly after dispatching."
+    }
+    operations do
+      capsule :dispatch,        klass: DispatchTool
+      capsule :query_resources, klass: ResourceQueryTool
     end
-    responders << [dept, id]
   end
 
-  fire = center.departments[:fire]
-  if fire
-    request = MutualAidRequest.new(
-      from_department: fire.name,
-      description:     "Structure collapse with trapped occupants -- need all available units",
-      priority:        :critical,
-      call_id:         99
-    )
-    debug_me "  #{fire.name} broadcasting mutual aid request..."
-    fire.broadcast(:mutual_aid, request)
+  vsm_capsule.children["dispatch"].center = center
+  vsm_capsule.children["query_resources"].city_memory = CITY_MEMORY
+
+  puts <<~VSM_INFO
+    #{SEPARATOR}
+      VSM CAPSULE BUILT: #{vsm_capsule.name}
+      Roles:    #{vsm_capsule.roles.keys.join(", ")}
+      Tools:    #{vsm_capsule.children.keys.join(", ")}
+    #{SEPARATOR}
+
+  VSM_INFO
+
+  vsm_emergency = {
+    dept: :ems,
+    incident: :mass_casualty,
+    details: "Bus accident on Highway 5, approximately 20 injured passengers"
+  }
+
+  puts "Feeding emergency through VSM capsule: #{vsm_emergency[:incident]}"
+
+  session_id = SecureRandom.uuid
+  collected_output = []
+
+  vsm_capsule.bus.subscribe do |msg|
+    case msg.kind
+    when :assistant
+      collected_output << msg.payload.to_s unless msg.payload.to_s.empty?
+      LOG.info "[VSM] Assistant: #{msg.payload.to_s[0, 200]}"
+    when :tool_call
+      LOG.info "[VSM] Tool call: #{msg.payload[:tool]}(#{msg.payload[:args]})"
+    when :tool_result
+      LOG.info "[VSM] Tool result: #{msg.payload.to_s[0, 200]}"
+    end
+  end
+
+  Async do |task|
+    vsm_capsule.bus.emit(VSM::Message.new(
+      kind: :user,
+      payload: "Emergency: #{vsm_emergency[:incident].to_s.tr('_', ' ')}. " \
+               "Department: #{vsm_emergency[:dept]}. " \
+               "Details: #{vsm_emergency[:details]}. " \
+               "Please dispatch this emergency.",
+      meta: { session_id: session_id }
+    ))
+
+    capsule_task = vsm_capsule.run
+    task.sleep(30)
+    capsule_task.stop
+  rescue => e
+    LOG.error "VSM: #{e.class} - #{e.message}"
   end
 end
 
 # ---------------------------------------------------------------
-# Summary
+# Phase 5: CommsRobot -- Natural Language to Typed Messages
 # ---------------------------------------------------------------
 
-center.print_summary
+if run_phase?(5)
+  puts <<~PHASE
 
-# City memory summary
-debug_me "\nCity Memory State:"
-debug_me "  Active incidents: #{CITY_MEMORY.get(:active_incidents)}"
-debug_me "  Total dispatches: #{CITY_MEMORY.get(:total_dispatches)}"
-dept_data = CITY_MEMORY.get(:departments) || {}
-dept_data.each do |type, info|
-  debug_me "  #{type}: #{info[:handlers]} handlers"
+    PHASE 5: CommsRobot -- Natural Language to Typed Messages
+    The CommsRobot interprets free-text and publishes typed messages.
+    Message schemas discovered dynamically: #{BusSetup::CHANNELS.keys.join(", ")}
+
+  PHASE
+
+  comms = CommsRobot.new(bus: Department.shared_bus)
+
+  comms_scenarios = [
+    "There's a massive structure fire at the old warehouse on 7th and Broadway. " \
+    "Multiple floors involved, civilians may be trapped. Call ID is 50. " \
+    "Fire department is responding but overwhelmed and needs immediate help " \
+    "from all available units. This is critical priority.",
+
+    "Police department currently has 15 officers available out of 20 total on duty.",
+
+    "EMS department just finished handling cardiac arrest, call number 42. " \
+    "The handler method was handle_cardiac_arrest and it took 3.5 seconds. " \
+    "The method was newly generated on the fly.",
+  ]
+
+  comms_scenarios.each_with_index do |scenario, index|
+    puts <<~RELAY
+      #{THIN_SEP}
+        CommsRobot Relay ##{index + 1}
+        Input: #{scenario[0, 100]}...
+      #{THIN_SEP}
+    RELAY
+
+    published = comms.relay(scenario)
+    if published.empty?
+      puts "  No messages published (LLM may not have returned valid JSON)"
+    else
+      published.each do |pub|
+        puts "  Published #{pub[:type]} on :#{pub[:channel]}"
+        ap pub[:message].to_h
+      end
+    end
+    puts
+  rescue => e
+    LOG.error "CommsRobot relay ##{index + 1}: #{e.class} - #{e.message}"
+    puts "  Error: #{e.message}"
+  end
+end
+
+# ---------------------------------------------------------------
+# Summary (only when there's dispatch data to report)
+# ---------------------------------------------------------------
+
+if center.dispatch_log.any? || center.departments.any?
+  center.print_summary
+
+  puts <<~MEMORY
+
+    City Memory State:
+      Active incidents: #{CITY_MEMORY.get(:active_incidents)}
+      Total dispatches: #{CITY_MEMORY.get(:total_dispatches)}
+  MEMORY
+
+  dept_data = CITY_MEMORY.get(:departments) || {}
+  dept_data.each do |type, info|
+    puts "    #{type}: #{info[:handlers]} handlers"
+  end
 end
 
 # ---------------------------------------------------------------
 # Phase 6: Save Department Source Files
 # ---------------------------------------------------------------
 
-debug_me "\nPHASE 6: Saving Department Source Files"
-debug_me "Each department saves itself as a Ruby class file.\n"
+if run_phase?(6)
+  puts <<~PHASE
 
-center.departments.each do |type, dept|
-  path = dept.save_source!
-  debug_me "  Saved #{dept.name} -> #{path}"
+    PHASE 6: Saving Department Source Files
+    Each department saves itself as a Ruby class file.
+
+  PHASE
+
+  center.departments.each do |type, dept|
+    path = dept.save_source!
+    puts "  Saved #{dept.name} -> #{path}"
+  end
 end

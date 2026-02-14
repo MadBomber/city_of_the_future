@@ -14,22 +14,22 @@ class TestMessages < Minitest::Test
     assert_equal :critical, msg.severity
   end
 
-  def test_incident_report_is_frozen
+  def test_incident_report_is_immutable
     msg = IncidentReport.new(
       call_id: 1, department: "Fire", incident: :blaze,
       details: "details", severity: :normal, timestamp: Time.now
     )
-    assert msg.frozen?
+    assert_raises(NoMethodError) { msg.call_id = 99 }
   end
 
   def test_dispatch_result_fields
     msg = DispatchResult.new(
-      call_id: 2, department: "EMS", method: :handle_cardiac,
+      call_id: 2, department: "EMS", handler: :handle_cardiac,
       result: "ok", was_new: true, elapsed: 1.5
     )
     assert_equal 2, msg.call_id
     assert_equal "EMS", msg.department
-    assert_equal :handle_cardiac, msg.method
+    assert_equal :handle_cardiac, msg.handler
     assert_equal true, msg.was_new
     assert_equal 1.5, msg.elapsed
   end
@@ -64,12 +64,12 @@ class TestMessages < Minitest::Test
     assert_equal 12, msg.source_lines
   end
 
-  def test_messages_are_data_classes
-    assert IncidentReport < Data
-    assert DispatchResult < Data
-    assert MutualAidRequest < Data
-    assert ResourceUpdate < Data
-    assert MethodGenerated < Data
+  def test_messages_are_dry_structs
+    assert IncidentReport < Dry::Struct
+    assert DispatchResult < Dry::Struct
+    assert MutualAidRequest < Dry::Struct
+    assert ResourceUpdate < Dry::Struct
+    assert MethodGenerated < Dry::Struct
   end
 
   def test_equality_by_value
@@ -77,5 +77,34 @@ class TestMessages < Minitest::Test
     a = IncidentReport.new(call_id: 1, department: "X", incident: :y, details: "z", severity: :normal, timestamp: t)
     b = IncidentReport.new(call_id: 1, department: "X", incident: :y, details: "z", severity: :normal, timestamp: t)
     assert_equal a, b
+  end
+
+  def test_coercion_from_strings
+    msg = IncidentReport.new(
+      call_id: "42", department: "Fire", incident: "structure_fire",
+      details: "test", severity: "critical"
+    )
+    assert_equal 42, msg.call_id
+    assert_equal :structure_fire, msg.incident
+    assert_equal :critical, msg.severity
+    assert_instance_of Time, msg.timestamp
+  end
+
+  def test_defaults
+    msg = IncidentReport.new(incident: :test)
+    assert_equal 0, msg.call_id
+    assert_equal "Unknown", msg.department
+    assert_equal "", msg.details
+    assert_equal :normal, msg.severity
+    assert_instance_of Time, msg.timestamp
+  end
+
+  def test_boolean_coercion
+    msg = DispatchResult.new(
+      call_id: 1, department: "EMS", handler: :handle_test,
+      result: "ok", was_new: "true", elapsed: "2.5"
+    )
+    assert_equal true, msg.was_new
+    assert_equal 2.5, msg.elapsed
   end
 end

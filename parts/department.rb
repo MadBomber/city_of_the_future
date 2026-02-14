@@ -154,11 +154,11 @@ class Department
     ))
   end
 
-  def broadcast_dispatch_result(call_id:, method:, result:, was_new:, elapsed:)
+  def broadcast_dispatch_result(call_id:, handler:, result:, was_new:, elapsed:)
     broadcast(:dispatch_results, DispatchResult.new(
       call_id:    call_id,
       department: @name,
-      method:     method,
+      handler:    handler,
       result:     result,
       was_new:    was_new,
       elapsed:    elapsed
